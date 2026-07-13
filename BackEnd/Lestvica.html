@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lestvica – Easy Rent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Ozadje: mrežni vzorec in svetlobni orbi definirani v style.css -->
+<div class="bg-grid"></div>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div id="app">
+
+  <!-- Navigacijska vrstica, skupna vsem podstranem -->
+  <nav class="navbar">
+    <div class="nav-logo" onclick="window.location='index.html'">EASY<span>RENT</span></div>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Domov</a>
+      <a class="nav-link" href="lestvica.html">Lestvica</a>
+      <a class="nav-link" href="statistika.html">Statistika</a>
+      <a class="nav-link" href="nepremicnine.html">Nepremičnine</a>
+      <a class="nav-link" href="forum.html">Forum</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="profil.html">Profil</a>
+    </div>
+    <div class="nav-actions">
+      <div id="authButtons" style="display:flex;gap:0.5rem">
+        <button class="btn-ghost" onclick="openModal('login')" style="margin-right:0.5rem">Prijava</button>
+        <button class="btn-primary" onclick="openModal('register')">Registracija</button>
+      </div>
+      <div id="userMenu" style="display:none;align-items:center;gap:0.5rem">
+        <div class="user-avatar" id="userAvatar" title="Profil">--</div>
+        <button class="btn-ghost" onclick="odjava()">Odjava</button>
+      </div>
+    </div>
+  </nav>
+
+  <!--
+    Modalni dialog za avtentikacijo (skupen vsem podstranem).
+    TODO: ob pošiljanju poklicati backend API za avtentikacijo.
+  -->
+  <div class="modal-overlay" id="authModal" onclick="closeModalOutside(event)">
+    <div class="modal">
+      <div class="modal-close" onclick="closeModal()">&#x2715;</div>
+      <div class="modal-header">
+        <div class="modal-title">Easy Rent</div>
+        <div class="modal-sub">Prijava v svoj račun</div>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('login')">Prijava</button>
+        <button class="modal-tab" onclick="switchTab('register')">Registracija</button>
+      </div>
+
+      <!-- Prijavni obrazec -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Uporabniško ime / E-pošta</label>
+          <input type="text" class="form-input" placeholder="Vnesi username..." id="loginUser">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" id="loginPass">
+        </div>
+        <p id="loginNapaka" class="form-error"></p>
+        <button class="form-submit" onclick="doLogin()">PRIJAVA</button>
+      </div>
+
+      <!-- Registracijski obrazec (privzeto skrit) -->
+      <div id="registerForm" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Uporabniško ime</label>
+          <input type="text" class="form-input" id="preveriGamerTag" placeholder="Kako naj te kličemo?">
+          <p class="form-error-mt" id="napakaGamerTag"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-pošta</label>
+          <input type="email" class="form-input" id="preveriEPosta" placeholder="email@primer.com">
+          <p class="form-error-mt" id="napakaEPosta"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" id="preveriGeslo" placeholder="Min. 8 znakov...">
+          <p class="form-error-mt" id="napakaGesla"></p>
+        </div>
+        <button class="form-submit" onclick="doRegister()">USTVARI RAČUN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast obvestila, dodajana dinamično z JS -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Glavna vsebina strani -->
+  <div class="page active" id="leaderboardPage">
+
+    <!-- Naslov strani -->
+    <div style="margin-bottom:1.5rem">
+      <h1 class="section-title" style="font-size:2rem;margin-bottom:0.5rem">Lestvica</h1>
+      <p style="color:var(--text-secondary);font-size:0.9rem">Najbolj aktivni najemniki in lastniki tega meseca</p>
+    </div>
+
+    <!--
+      Filtri po tipu nepremičnine.
+      setGame() filtrira tabelo po izbranem tipu (ime funkcije je ostalo
+      zaradi manjših sprememb, a zdaj filtrira po tipu nepremičnine).
+    -->
+    <div class="filter-bar" style="margin-bottom:1.25rem">
+      <div class="filter-chip active" onclick="setGame('all',this)">Vse vrste</div>
+      <div class="filter-chip" onclick="setGame('hisa',this)">Hiša</div>
+      <div class="filter-chip" onclick="setGame('apartma',this)">Apartma</div>
+      <div class="filter-chip" onclick="setGame('vila',this)">Vila</div>
+      <div class="filter-chip" onclick="setGame('kabina',this)">Kabina</div>
+    </div>
+
+    <!--
+      Zavihka za preklop med lestvico najemnikov in lastnikov.
+      switchLbTab() preklopi vidnost med #playersLb in #teamsLb.
+    -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchLbTab('players',this)">Najemniki</button>
+      <button class="tab-btn" onclick="switchLbTab('teams',this)">Lastniki</button>
+    </div>
+
+    <!--
+      Lestvica najemnikov.
+      Vsebina se generira dinamično z renderPlayers() v JS spodaj.
+    -->
+    <div id="playersLb">
+      <div class="leaderboard-table">
+        <div class="lb-header">
+          <div>#</div>
+          <div>Najemnik</div>
+          <div style="text-align:center">Najemi</div>
+          <div style="text-align:center">Tocke</div>
+          <div style="text-align:center">Ocena</div>
+          <div style="text-align:center">Trend</div>
+        </div>
+        <!-- Vrstice se generirajo dinamično -->
+        <div id="lbRows"></div>
+      </div>
+    </div>
+
+    <!--
+      Lestvica lastnikov nepremičnin (privzeto skrita).
+      Vsebina se generira dinamično z renderTeamsLb() v JS spodaj.
+    -->
+    <div id="teamsLb" style="display:none">
+      <div class="leaderboard-table">
+        <div class="lb-header">
+          <div>#</div>
+          <div>Lastnik</div>
+          <div style="text-align:center">Oddaje</div>
+          <div style="text-align:center">Tocke</div>
+          <div style="text-align:center">Ocena</div>
+          <div style="text-align:center">Trend</div>
+        </div>
+        <!-- Vrstice se generirajo dinamično -->
+        <div id="teamsLbRows"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-logo">EASYRENT</div>
+    <p>&copy; 2026 Easy Rent &middot; Preprosto oddajanje in najemanje nepremičnin &middot; Slovenija</p>
+  </div>
+</div>
+
+
+<script>
+  /*
+   * Statični podatki o najemnikih za lestvico.
+   * TODO: nadomestiti s klicem na backend API (GET /api/leaderboard/najemniki).
+   *
+   * Polja:
+   *   name, tag     - prikazno ime in uporabniška oznaka
+   *   game          - tip nepremičnine, ki jo najemnik najpogosteje najema (za filtriranje)
+   *   wins          - število uspešno zaključenih najemov
+   *   points        - skupne točke zvestobe
+   *   tournaments   - povprečna ocena, ki jo je najemnik prejel od lastnikov (x10, da se ujema s prikazom)
+   *   trend         - smer gibanja (navzgor/navzdol/enako) na lestvici ta mesec
+   *   tColor        - barva trenda
+   *   avatar        - inicialke za avatar
+   *   avatarBg      - barva ozadja avatarja
+   */
+  const players = [
+    { name:'Nina Kovač',    tag:'@nina.k',    game:'apartma', wins:24, points:2840, tournaments:49, trend:'navzgor',  tColor:'var(--accent-green)', avatar:'NK', avatarBg:'var(--accent-purple)' },
+    { name:'Luka Zupan',    tag:'@luka.z',    game:'hisa',    wins:19, points:2490, tournaments:47, trend:'navzgor',  tColor:'var(--accent-green)', avatar:'LZ', avatarBg:'var(--accent-cyan)'   },
+    { name:'Ana Horvat',    tag:'@ana.h',     game:'vila',    wins:16, points:2210, tournaments:48, trend:'enako',    tColor:'var(--text-muted)',   avatar:'AH', avatarBg:'var(--accent-pink)'   },
+    { name:'Rok Potočnik',  tag:'@rok.p',     game:'apartma', wins:14, points:1980, tournaments:45, trend:'navzgor',  tColor:'var(--accent-green)', avatar:'RP', avatarBg:'var(--accent-orange)' },
+    { name:'Maja Kranjc',   tag:'@maja.k',    game:'kabina',  wins:12, points:1740, tournaments:44, trend:'navzdol',  tColor:'#ff4466',             avatar:'MK', avatarBg:'var(--accent-purple)' },
+    { name:'Jure Novak',    tag:'@jure.n',    game:'hisa',    wins:10, points:1510, tournaments:46, trend:'navzgor',  tColor:'var(--accent-green)', avatar:'JN', avatarBg:'var(--accent-cyan)'   },
+    { name:'Eva Vidmar',    tag:'@eva.v',     game:'apartma', wins:8,  points:1280, tournaments:43, trend:'enako',    tColor:'var(--text-muted)',   avatar:'EV', avatarBg:'var(--accent-pink)'   },
+    { name:'Tim Golob',     tag:'@tim.g',     game:'vila',    wins:6,  points:1090, tournaments:41, trend:'navzdol',  tColor:'#ff4466',             avatar:'TG', avatarBg:'var(--accent-orange)' },
+  ];
+
+  /*
+   * Statični podatki o lastnikih nepremičnin za lestvico.
+   * TODO: nadomestiti s klicem na backend API (GET /api/leaderboard/lastniki).
+   */
+  const teamsData = [
+    { name:'Novak Nepremičnine',  tag:'NOV', game:'hisa',    wins:34, points:1840, tournaments:48, trend:'navzgor',  tColor:'var(--accent-green)' },
+    { name:'Kranjska Vila d.o.o.',tag:'KRV', game:'vila',    wins:27, points:1560, tournaments:47, trend:'navzgor',  tColor:'var(--accent-green)' },
+    { name:'Obala Apartmaji',     tag:'OBA', game:'apartma', wins:23, points:1380, tournaments:46, trend:'enako',    tColor:'var(--text-muted)'   },
+    { name:'Gorenjske Kabine',    tag:'GOK', game:'kabina',  wins:18, points:1120, tournaments:44, trend:'navzdol',  tColor:'#ff4466'             },
+    { name:'Mestne Sobe LJ',      tag:'MSL', game:'apartma', wins:14, points:940,  tournaments:45, trend:'navzgor',  tColor:'var(--accent-green)' },
+    { name:'Alpski Dom',          tag:'ALD', game:'hisa',    wins:11, points:720,  tournaments:42, trend:'enako',    tColor:'var(--text-muted)'   },
+  ];
+
+  /* Medalje za prvih tri mesta */
+  const medals = ['1.', '2.', '3.'];
+
+  let activeGame = 'all';
+
+  /*
+   * rankIcon(i)
+   * Vrne HTML za oznako mesta (medalja za top 3, sicer številka).
+   */
+  function rankIcon(i) {
+    if (i < 3) return `<span style="font-weight:700;color:var(--accent-cyan)">${medals[i]}</span>`;
+    return `<span style="font-family:'DM Mono',monospace;color:var(--text-muted)">${i + 1}</span>`;
+  }
+
+  /*
+   * renderPlayers(list)
+   * Generira vrstice lestvice za podani seznam najemnikov.
+   * Prva vrstica je vizualno poudarjena.
+   */
+  function renderPlayers(list) {
+    document.getElementById('lbRows').innerHTML = list.map((p, i) => `
+      <div class="lb-row" style="${i === 0 ? 'background:var(--bg-elevated)' : ''}">
+        <div>${rankIcon(i)}</div>
+
+        <!-- Avatar in podatki o najemniku -->
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <div style="width:36px;height:36px;border-radius:50%;background:${p.avatarBg};display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;color:var(--bg-card)">${p.avatar}</div>
+          <div>
+            <div style="font-weight:600;font-size:0.9rem">${p.name}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);font-family:'DM Mono',monospace">${p.tag}</div>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-weight:700;color:var(--accent-cyan)">${p.wins}</div>
+        <div style="text-align:center;font-family:'Poppins',sans-serif;font-size:1.1rem;font-weight:700">${p.points}</div>
+        <div style="text-align:center;color:var(--text-secondary)">${(p.tournaments/10).toFixed(1)} ★</div>
+
+        <!-- Smer gibanja na lestvici -->
+        <div style="text-align:center;font-weight:700;color:${p.tColor}">${p.trend}</div>
+      </div>
+    `).join('');
+  }
+
+  /*
+   * renderTeamsLb(list)
+   * Generira vrstice lestvice za podani seznam lastnikov nepremičnin.
+   */
+  function renderTeamsLb(list) {
+    document.getElementById('teamsLbRows').innerHTML = list.map((t, i) => `
+      <div class="lb-row" style="${i === 0 ? 'background:var(--bg-elevated)' : ''}">
+        <div>${rankIcon(i)}</div>
+
+        <!-- Oznaka lastnika in njegovo ime -->
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <div style="width:36px;height:36px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;font-family:'Poppins',sans-serif;color:var(--accent-cyan)">${t.tag}</div>
+          <div style="font-weight:600;font-size:0.9rem">${t.name}</div>
+        </div>
+
+        <div style="text-align:center;font-weight:700;color:var(--accent-cyan)">${t.wins}</div>
+        <div style="text-align:center;font-family:'Poppins',sans-serif;font-size:1.1rem;font-weight:700">${t.points}</div>
+        <div style="text-align:center;color:var(--text-secondary)">${(t.tournaments/10).toFixed(1)} ★</div>
+        <div style="text-align:center;font-weight:700;color:${t.tColor}">${t.trend}</div>
+      </div>
+    `).join('');
+  }
+
+  /*
+   * setGame(g, el)
+   * Nastavi filter po tipu nepremičnine in osveži obe lestvici.
+   */
+  function setGame(g, el) {
+    activeGame = g;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    applyFilters();
+  }
+
+  /*
+   * applyFilters()
+   * Filtrira podatke po tipu nepremičnine in osveži obe tabeli (najemniki in lastniki).
+   */
+  function applyFilters() {
+    const pl = activeGame === 'all' ? players    : players.filter(p => p.game === activeGame);
+    const tm = activeGame === 'all' ? teamsData  : teamsData.filter(t => t.game === activeGame);
+    renderPlayers(pl);
+    renderTeamsLb(tm);
+  }
+
+  /*
+   * switchLbTab(tab, el)
+   * Preklopi med prikazom lestvice najemnikov in lastnikov.
+   */
+  function switchLbTab(tab, el) {
+    document.getElementById('playersLb').style.display = tab === 'players' ? 'block' : 'none';
+    document.getElementById('teamsLb').style.display   = tab === 'teams'   ? 'block' : 'none';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function openModal(tab) {
+    document.getElementById('authModal').style.display = 'flex';
+    switchTab(tab);
+  }
+
+  function closeModal() { document.getElementById('authModal').style.display = 'none'; }
+
+  function closeModalOutside(e) {
+    if (e.target.id === 'authModal') closeModal();
+  }
+
+  function switchTab(t) {
+    document.getElementById('loginForm').style.display    = t === 'login'    ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = t === 'register' ? 'block' : 'none';
+    document.querySelectorAll('.modal-tab').forEach((b, i) =>
+      b.classList.toggle('active', (i === 0 && t === 'login') || (i === 1 && t === 'register'))
+    );
+  }
+
+  // Začetni prikaz ob nalaganju strani
+  applyFilters();
+
+  function odjava() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('vloga');
+    localStorage.removeItem('username');
+    const ab = document.getElementById('authButtons');
+    const um = document.getElementById('userMenu');
+    if (ab) ab.style.display = 'flex';
+    if (um) um.style.display = 'none';
+  }
+
+  (function preveriPrijavo() {
+    const username = localStorage.getItem('username');
+    if (!username) return;
+    const ab = document.getElementById('authButtons');
+    const um = document.getElementById('userMenu');
+    const av = document.getElementById('userAvatar');
+    if (ab) ab.style.display = 'none';
+    if (um) um.style.display = 'flex';
+    if (av) av.textContent   = username.substring(0,2).toUpperCase();
+  })();
+
+</script>
+<script src="login.js"></script>
+<script src="registracija.js"></script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forum – Easy Rent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Ozadje: mrežni vzorec in svetlobni orbi definirani v style.css -->
+<div class="bg-grid"></div>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div id="app">
+
+  <!-- Navigacijska vrstica, skupna vsem podstranem -->
+  <nav class="navbar">
+   <div class="nav-logo" onclick="window.location='index.html'">EASY<span>RENT</span></div>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Domov</a>
+      <a class="nav-link" href="lestvica.html">Lestvica</a>
+      <a class="nav-link" href="statistika.html">Statistika</a>
+      <a class="nav-link" href="nepremicnine.html">Nepremičnine</a>
+      <a class="nav-link" href="forum.html">Forum</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="profil.html">Profil</a>
+    </div>
+    <div class="nav-actions">
+      <div id="authButtons" style="display:flex;gap:0.5rem">
+        <button class="btn-ghost" onclick="openModal('login')" style="margin-right:0.5rem">Prijava</button>
+        <button class="btn-primary" onclick="openModal('register')">Registracija</button>
+      </div>
+      <div id="userMenu" style="display:none;align-items:center;gap:0.5rem">
+        <div class="user-avatar" id="userAvatar" title="Profil">--</div>
+        <button class="btn-ghost" onclick="odjava()">Odjava</button>
+      </div>
+    </div>
+  </nav>
+
+  <!--
+    Modalni dialog za avtentikacijo (skupen vsem podstranem).
+    TODO: ob pošiljanju poklicati backend API za avtentikacijo.
+  -->
+  <div class="modal-overlay" id="authModal" onclick="closeModalOutside(event)">
+    <div class="modal">
+      <div class="modal-close" onclick="closeModal()">&#x2715;</div>
+      <div class="modal-header">
+        <div class="modal-title">Easy Rent</div>
+        <div class="modal-sub">Prijava v svoj račun</div>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('login')">Prijava</button>
+        <button class="modal-tab" onclick="switchTab('register')">Registracija</button>
+      </div>
+
+      <!-- Prijavni obrazec -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Uporabniško ime / E-pošta</label>
+          <input type="text" class="form-input" placeholder="Vnesi username..." id="loginUser">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" id="loginPass">
+        </div>
+        <p id="loginNapaka" class="form-error"></p>
+        <button class="form-submit" onclick="doLogin()">PRIJAVA</button>
+      </div>
+
+      <!-- Registracijski obrazec (privzeto skrit) -->
+      <div id="registerForm" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Uporabniško ime</label>
+          <input type="text" class="form-input" id="preveriGamerTag" placeholder="Kako naj te kličemo?">
+          <p style="display: none;" id="napakaGamerTag"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-pošta</label>
+          <input type="email" class="form-input" id="preveriEPosta" placeholder="email@primer.com">
+          <p style="display: none;" id="napakaEPosta"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" id="preveriGeslo" placeholder="Min. 8 znakov...">
+          <p style="display: none;" id="napakaGesla"></p>
+        </div>
+        <button class="form-submit" onclick="doRegister()">USTVARI RAČUN</button>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    Modalni dialog za pisanje nove forumske objave.
+    submitPost() validira vnosna polja in doda objavo v seznam.
+    TODO: ob pošiljanju shraniti objavo v bazo (POST /api/forum).
+  -->
+  <div class="modal-overlay" id="newPostModal" onclick="closeNewPost(event)" style="display:none">
+    <div class="modal" style="width:520px;max-width:95vw">
+      <div class="modal-close" onclick="document.getElementById('newPostModal').style.display='none'">&#x2715;</div>
+      <div class="modal-header">
+        <div class="modal-title">Nova Objava</div>
+        <div class="modal-sub">Deli svoje misli z skupnostjo</div>
+      </div>
+
+      <!-- Kategorija objave -->
+      <div class="form-group">
+        <label class="form-label">Kategorija</label>
+        <select class="form-input" id="postCat">
+          <option>Splosno</option>
+          <option>Najemi</option>
+          <option>Nasveti</option>
+          <option>Vzdrzevanje</option>
+          <option>Sosedje</option>
+          <option>Pravno</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Naslov</label>
+        <input type="text" class="form-input" placeholder="Naslov tvoje objave..." id="postTitle">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Vsebina</label>
+        <textarea class="form-input" rows="5" placeholder="Napisi svojo objavo..." id="postBody" style="resize:vertical"></textarea>
+      </div>
+
+      <button class="form-submit" onclick="submitPost()">OBJAVI</button>
+    </div>
+  </div>
+
+  <!-- Toast obvestila, dodajana dinamično z JS -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Glavna vsebina strani -->
+  <div class="page active" id="forumPage">
+
+    <!-- Naslov strani in gumb za novo objavo -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+      <div>
+        <h1 class="section-title" style="font-size:2rem;margin-bottom:0.5rem">Skupnost Easy Rent</h1>
+        <p style="color:var(--text-secondary);font-size:0.9rem">Vprašanja, nasveti in izkušnje najemnikov ter lastnikov nepremičnin</p>
+      </div>
+      <!-- Odpre modal za pisanje nove objave -->
+      <button class="btn-primary" onclick="document.getElementById('newPostModal').style.display='flex'">+ Nova objava</button>
+    </div>
+
+    <!--
+      Hitri dostop do kategorij foruma.
+      Vsebina se generira dinamično z renderCats() v JS spodaj.
+      TODO: število objav na kategorijo prebrati iz baze.
+    -->
+    <div class="forum-categories" id="forumCats"></div>
+
+    <!--
+      Filtri za iskanje in razvrščanje objav.
+      setCat() filtrira po kategoriji, applyFilters() kombinira vse filtre.
+    -->
+    <div class="filter-bar" style="margin:1.25rem 0">
+      <input type="text" class="search-input" placeholder="Iskanje razprav..." id="forumSearch" oninput="filterPosts()">
+      <div class="filter-chip active" onclick="setCat('all',this)">Vse</div>
+      <div class="filter-chip" onclick="setCat('najemi',this)">Najemi</div>
+      <div class="filter-chip" onclick="setCat('nasveti',this)">Nasveti</div>
+      <div class="filter-chip" onclick="setCat('vzdrzevanje',this)">Vzdrževanje</div>
+      <div class="filter-chip" onclick="setCat('sosedje',this)">Sosedje</div>
+      <div class="filter-chip" onclick="setCat('splosno',this)">Splošno</div>
+    </div>
+
+    <!-- Naslov sekcije in meni za razvrščanje -->
+    <div class="section-header">
+      <div class="section-title"><span>Popularne</span> Razprave</div>
+      <div style="display:flex;gap:0.5rem">
+        <!-- Razvrščanje: vroče (po hot vrednosti), novo, po glasovih -->
+        <select class="form-input" style="width:auto;font-size:0.8rem;padding:0.3rem 0.7rem" onchange="sortPosts(this.value)">
+          <option value="hot">Hot</option>
+          <option value="new">Novo</option>
+          <option value="top">Top</option>
+        </select>
+      </div>
+    </div>
+
+    <!--
+      Seznam forumskih objav.
+      Vsebina se generira dinamično z renderPosts() v JS spodaj.
+      TODO: objave prebrati iz backend API-ja (GET /api/posts).
+    -->
+    <div id="forumPosts"></div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-logo">EASYRENT</div>
+    <p>&copy; 2026 Easy Rent &middot; Preprosto oddajanje in najemanje nepremičnin &middot; Slovenija</p>
+  </div>
+</div>
+
+<!-- Lokalni stili specifični za to stran -->
+
+<script>
+  /*
+   * Statični seznam kategorij foruma.
+   * TODO: nadomestiti s klicem na backend API (GET /api/forum/categories).
+   *
+   * Polja:
+   *   icon   - unicode znak za vizualni prikaz
+   *   name   - prikazno ime
+   *   count  - število objav v tej kategoriji
+   *   id     - interna vrednost za filtriranje
+   */
+  /*
+   * Statični seznam kategorij foruma.
+   * TODO: nadomestiti s klicem na backend API (GET /api/forum/categories).
+   *
+   * Polja:
+   *   icon   - unicode znak za vizualni prikaz
+   *   name   - prikazno ime
+   *   count  - število objav v tej kategoriji
+   *   id     - interna vrednost za filtriranje
+   */
+  const cats = [
+    { icon:'S', name:'Splosno',     count:96,  id:'splosno'     },
+    { icon:'N', name:'Najemi',      count:74,  id:'najemi'      },
+    { icon:'?', name:'Nasveti',     count:112, id:'nasveti'     },
+    { icon:'V', name:'Vzdrzevanje', count:58,  id:'vzdrzevanje' },
+    { icon:'K', name:'Sosedje',     count:41,  id:'sosedje'     },
+    { icon:'P', name:'Pravno',      count:33,  id:'pravno'      },
+  ];
+
+  /*
+   * Statični seznam forumskih objav.
+   * TODO: nadomestiti s klicem na backend API (GET /api/forum).
+   *
+   * Polja:
+   *   id           - unikatni identifikator objave
+   *   title        - naslov objave
+   *   preview      - kratek povzetek vsebine
+   *   cat          - kategorija (za filtriranje)
+   *   catLabel     - prikazni naziv kategorije
+   *   catColor/Bg  - barva oznake kategorije
+   *   author       - prikazno ime avtorja
+   *   authorBg     - barva ozadja avatarja avtorja
+   *   authorInit   - inicialke avtorja
+   *   votes        - trenutno število glasov
+   *   comments     - število komentarjev
+   *   time         - relativni čas objave
+   *   pinned       - ali je objava pripeta na vrh
+   *   hot          - vrednost za razvrščanje po priljubljenosti
+   */
+  const posts = [
+    {
+      id:1, title:'Kako preveriti, da je najemna pogodba v redu?',
+      preview:'Prvič najemam stanovanje in ne vem, na kaj moram biti pozoren v pogodbi. Kaj obvezno preverite pred podpisom?',
+      cat:'pravno', catLabel:'Pravno', catColor:'var(--accent-purple)', catBg:'var(--bg-elevated)',
+      author:'NovaNajemnica', authorBg:'var(--accent-purple)', authorInit:'NN',
+      votes:142, comments:38, time:'pred 2 urama', pinned:true, hot:142
+    },
+    {
+      id:2, title:'Iščem sostanovalca za trisobno stanovanje v Ljubljani',
+      preview:'Prosta je ena soba v lepem trisobnem stanovanju blizu centra. Iščem mirnega sostanovalca za vsaj 6 mesecev.',
+      cat:'najemi', catLabel:'Najemi', catColor:'var(--accent-cyan)', catBg:'var(--bg-elevated)',
+      author:'MarkoLJ', authorBg:'var(--accent-cyan)', authorInit:'ML',
+      votes:89, comments:24, time:'pred 5 urami', pinned:false, hot:89
+    },
+    {
+      id:3, title:'Puščanje pri radiatorju – kdo krije popravilo?',
+      preview:'V najetem stanovanju je začel puščati radiator. Ali stroške popravila krije lastnik ali najemnik?',
+      cat:'vzdrzevanje', catLabel:'Vzdrževanje', catColor:'var(--accent-orange)', catBg:'var(--bg-elevated)',
+      author:'PetraK', authorBg:'var(--accent-orange)', authorInit:'PK',
+      votes:67, comments:19, time:'pred 8 urami', pinned:false, hot:67
+    },
+    {
+      id:4, title:'Prvič oddajam stanovanje – kje sploh začeti?',
+      preview:'Podedovala sem manjše stanovanje in razmišljam o oddaji. Kakšne so izkušnje z Easy Rent objavo od začetka do prvega najemnika?',
+      cat:'splosno', catLabel:'Splosno', catColor:'var(--accent-green)', catBg:'var(--bg-elevated)',
+      author:'NovaLastnica', authorBg:'var(--accent-green)', authorInit:'NL',
+      votes:45, comments:31, time:'pred 12 urami', pinned:false, hot:45
+    },
+    {
+      id:5, title:'Glasni sosedje ponoči – kako urediti mirno sobivanje?',
+      preview:'Zadnja dva tedna imam zelo glasne sosede ob nočnih urah. Kako ste to reševali vi, da ne bi bilo slabe krvi?',
+      cat:'sosedje', catLabel:'Sosedje', catColor:'var(--accent-pink)', catBg:'var(--bg-elevated)',
+      author:'TihaSpalnica', authorBg:'var(--accent-pink)', authorInit:'TS',
+      votes:33, comments:12, time:'včeraj', pinned:false, hot:33
+    },
+    {
+      id:6, title:'Najboljši nasveti za selitev brez stresa',
+      preview:'Čez dva tedna se selim v novo najeto stanovanje. Katere aplikacije in trike uporabljate za lažjo organizacijo selitve?',
+      cat:'nasveti', catLabel:'Nasveti', catColor:'var(--accent-purple)', catBg:'var(--bg-elevated)',
+      author:'SelitevPro', authorBg:'var(--accent-purple)', authorInit:'SP',
+      votes:78, comments:45, time:'pred 2 dnevoma', pinned:false, hot:78
+    },
+  ];
+
+  let activeCat   = 'all';
+  let userPosts   = [];        // objave, ki jih je dodal trenutni uporabnik (samo frontend)
+  let votedPosts  = new Set(); // ID-ji objav, za katere je uporabnik glasoval navzgor
+  let downvotedPosts = new Set(); // ID-ji objav, za katere je uporabnik glasoval navzdol
+
+  /*
+   * renderCats()
+   * Izriše kartice kategorij foruma.
+   * Klik na kategorijo filtrira objave.
+   */
+  function renderCats() {
+    document.getElementById('forumCats').innerHTML = cats.map(c => `
+      <div class="forum-cat" onclick="setCatById('${c.id}')">
+        <div class="forum-cat-icon">${c.icon}</div>
+        <div class="forum-cat-name">${c.name}</div>
+        <div class="forum-cat-count">${c.count} objav</div>
+      </div>
+    `).join('');
+  }
+
+  /* Filtriranje po kategoriji z klikom na kartico kategorije */
+  function setCatById(id) {
+    activeCat = id;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    applyFilters();
+  }
+
+  /*
+   * renderPosts(list)
+   * Izriše seznam forumskih objav iz podanega filtriranega seznama.
+   * Prikaže prazno stanje, če ni zadetkov.
+   */
+  function renderPosts(list) {
+    const container = document.getElementById('forumPosts');
+
+    if (!list.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">--</div>
+          <div class="empty-text">Nobena razprava ni bila najdena</div>
+          <div class="empty-sub">Bodi prvi in ustvari novo objavo!</div>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(p => `
+      <div class="forum-post ${p.pinned ? 'pinned' : ''}">
+
+        <!-- Glasovalni stolpec (gor/dol) -->
+        <div class="vote-col">
+          <button class="vote-btn ${votedPosts.has(p.id) ? 'voted' : ''}" onclick="vote(event,${p.id})">&#9650;</button>
+          <div class="vote-count" id="votes-${p.id}">${p.votes}</div>
+          <button class="vote-btn" onclick="downvote(event,${p.id})">&#9660;</button>
+        </div>
+
+        <!-- Vsebina objave -->
+        <div class="post-content">
+          <div class="post-meta">
+            ${p.pinned ? '<span class="post-pin">Pripeto</span>' : ''}
+            <span class="post-cat-tag" style="background:${p.catBg};color:${p.catColor}">${p.catLabel}</span>
+          </div>
+          <div class="post-title">${p.title}</div>
+          <div class="post-preview">${p.preview}</div>
+
+          <!-- Avtor, komentarji, cas objave -->
+          <div class="post-footer">
+            <div class="post-author">
+              <div class="post-avatar" style="background:${p.authorBg}">${p.authorInit}</div>
+              ${p.author}
+            </div>
+            <div class="post-stat">${p.comments} komentarjev</div>
+            <div class="post-stat">${p.time}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  /*
+   * vote(e, id)
+   * Preklopi glas navzgor za objavo z danim ID-jem.
+   * Drugi klik na isti glas glas odstrani.
+   * TODO: poslati glas na backend (POST /api/posts/:id/vote).
+   */
+function vote(e, id) {
+  e.stopPropagation();
+  const el = document.getElementById('votes-' + id);
+  const p = [...posts, ...userPosts].find(x => x.id === id);
+  if (!p) return;
+
+  if (votedPosts.has(id)) {
+    votedPosts.delete(id);
+    p.votes--;
+  } else {
+    // dodano preverjanje za downvote as well, da neres likat in dislikat at the same time
+    if (downvotedPosts.has(id)) {
+      downvotedPosts.delete(id);
+      p.votes++;
+    }
+    
+    votedPosts.add(id);
+    p.votes++;
+  }
+  el.textContent = p.votes;
+  applyFilters();
+}
+
+  /*
+   * downvote(e, id)
+   * Zmanjša glasovalno vrednost za eno (minimum 0).
+   * TODO: poslati negativni glas na backend.
+   */
+function downvote(e, id) {
+  e.stopPropagation();
+  const el = document.getElementById('votes-' + id);
+  const p = [...posts, ...userPosts].find(x => x.id === id);
+  if (!p) return;
+
+  // Če je uporabnik že oddal downvote, ga prekličemo (toggle off)
+  if (downvotedPosts.has(id)) {
+    downvotedPosts.delete(id);
+    p.votes++; // Vrnemo vrednost nazaj gor
+  } else {
+    // Če je uporabnik prej oddal upvote, ga moramo najprej odstraniti
+    if (votedPosts.has(id)) {
+      votedPosts.delete(id);
+      p.votes--;
+    }
+    
+    // Dodamo downvote
+    downvotedPosts.add(id);
+    p.votes--;
+  }
+
+  el.textContent = p.votes;
+  applyFilters(); // Osvežimo prikaz in razvrščanje
+}
+
+  /* Filtriranje po kategoriji z klikom na filter chip */
+  function setCat(cat, el) {
+    activeCat = cat;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    applyFilters();
+  }
+
+  function filterPosts() { applyFilters(); }
+
+  /* Trenutni nacin razvrscanja (hot = priljubljenost, new = casonapredovnost, top = skupni glasovi) */
+  let sortMode = 'hot';
+  function sortPosts(mode) { sortMode = mode; applyFilters(); }
+
+  /*
+   * applyFilters()
+   * Združi filter po kategoriji, iskalni niz in nacin razvrscanja.
+   * Uporabnikove objave (userPosts) se vedno dodajo na vrh.
+   */
+  function applyFilters() {
+    const q = (document.getElementById('forumSearch').value || '').toLowerCase();
+    let all = [...posts, ...userPosts];
+
+    if (activeCat !== 'all') all = all.filter(p => p.cat === activeCat);
+    if (q) all = all.filter(p => p.title.toLowerCase().includes(q) || p.preview.toLowerCase().includes(q));
+
+    if      (sortMode === 'hot') all.sort((a, b) => b.hot - a.hot);
+    else if (sortMode === 'top') all.sort((a, b) => b.votes - a.votes);
+    // 'new' ohrani privzeti vrstni red (userPosts so ze na vrhu)
+
+    renderPosts(all);
+  }
+
+  /*
+   * submitPost()
+   * Validira vnosna polja modalnega obrazca in doda novo objavo v userPosts.
+   * Objava se takoj prikaže na vrhu seznama.
+   * TODO: ob pošiljanju shraniti objavo na backend (POST /api/posts).
+   */
+  function submitPost() {
+    const title  = document.getElementById('postTitle').value.trim();
+    const body   = document.getElementById('postBody').value.trim();
+    const catRaw = document.getElementById('postCat').value;
+
+    if (!title || !body) {
+      showToast('Prosim izpolni naslov in vsebino!');
+      return;
+    }
+
+    // Mapiranje prikaznega naziva kategorije na interno vrednost in barve
+    const catMap    = { 'Splosno':'splosno', 'Najemi':'najemi', 'Nasveti':'nasveti', 'Vzdrzevanje':'vzdrzevanje', 'Sosedje':'sosedje', 'Pravno':'pravno' };
+    const catColors = {
+      splosno:     ['var(--accent-green)',  'var(--bg-elevated)', 'Splosno'    ],
+      najemi:      ['var(--accent-cyan)',   'var(--bg-elevated)', 'Najemi'     ],
+      nasveti:     ['var(--accent-purple)', 'var(--bg-elevated)', 'Nasveti'    ],
+      vzdrzevanje: ['var(--accent-orange)', 'var(--bg-elevated)', 'Vzdrzevanje'],
+      sosedje:     ['var(--accent-pink)',   'var(--bg-elevated)', 'Sosedje'    ],
+      pravno:      ['var(--accent-purple)', 'var(--bg-elevated)', 'Pravno'     ],
+    };
+    const catId           = catMap[catRaw] || 'splosno';
+    const [color, bg, label] = catColors[catId];
+
+    userPosts.unshift({
+      id:         Date.now(),
+      title,
+      preview:    body,
+      cat:        catId,
+      catLabel:   label,
+      catColor:   color,
+      catBg:      bg,
+      author:     'Jaz',
+      authorBg:   'var(--accent-cyan)',
+      authorInit: 'J',
+      votes:      1,
+      comments:   0,
+      time:       'ravnokar',
+      pinned:     false,
+      hot:        999,
+    });
+
+    // Zapri modal in pocisti polja
+    document.getElementById('newPostModal').style.display = 'none';
+    document.getElementById('postTitle').value = '';
+    document.getElementById('postBody').value  = '';
+
+    showToast('Objava uspesno objavljena!');
+    applyFilters();
+  }
+
+  /* Zapre modal za novo objavo ob kliku na ozadje */
+  function closeNewPost(e) {
+    if (e.target.id === 'newPostModal') document.getElementById('newPostModal').style.display = 'none';
+  }
+
+  /* Prikaže toast obvestilo na dnu zaslona (izgine po 3,5 s) */
+  function showToast(msg) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<div>${msg}</div>`;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  function openModal(tab) {
+    document.getElementById('authModal').style.display = 'flex';
+    switchTab(tab);
+  }
+
+  function closeModal() { document.getElementById('authModal').style.display = 'none'; }
+
+  function closeModalOutside(e) {
+    if (e.target.id === 'authModal') closeModal();
+  }
+
+  function switchTab(t) {
+    document.getElementById('loginForm').style.display    = t === 'login'    ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = t === 'register' ? 'block' : 'none';
+    document.querySelectorAll('.modal-tab').forEach((b, i) =>
+      b.classList.toggle('active', (i === 0 && t === 'login') || (i === 1 && t === 'register'))
+    );
+  }
+
+  // Začetni prikaz ob nalaganju strani
+  renderCats();
+  applyFilters();
+
+  function odjava() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('vloga');
+    localStorage.removeItem('username');
+    const ab = document.getElementById('authButtons');
+    const um = document.getElementById('userMenu');
+    if (ab) ab.style.display = 'flex';
+    if (um) um.style.display = 'none';
+  }
+
+  (function preveriPrijavo() {
+    const username = localStorage.getItem('username');
+    if (!username) return;
+    const ab = document.getElementById('authButtons');
+    const um = document.getElementById('userMenu');
+    const av = document.getElementById('userAvatar');
+    if (ab) ab.style.display = 'none';
+    if (um) um.style.display = 'flex';
+    if (av) av.textContent   = username.substring(0,2).toUpperCase();
+  })();
+
+</script>
+<script src="login.js"></script>
+<script src="registracija.js"></script>
+</body>
+</html>

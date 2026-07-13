@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prijava – Easy Rent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div id="app">
+
+  <nav class="navbar">
+    <div class="nav-logo" onclick="window.location='index.html'">EASY<span>RENT</span></div>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Domov</a>
+      <a class="nav-link" href="lestvica.html">Lestvica</a>
+      <a class="nav-link" href="statistika.html">Statistika</a>
+      <a class="nav-link" href="nepremicnine.html">Nepremičnine</a>
+      <a class="nav-link" href="forum.html">Forum</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="profil.html">Profil</a>
+    </div>
+    <div class="nav-actions">
+      <button class="btn-ghost" onclick="window.location='index.html'">← Nazaj</button>
+    </div>
+  </nav>
+
+  <div class="auth-page">
+    <div class="auth-card">
+
+      <div class="auth-logo">
+        <div class="auth-logo-text">EASY<span>RENT</span></div>
+        <div class="auth-logo-sub">Prijava v svoj račun</div>
+      </div>
+
+      <!-- POPRAVEK: odstranjen action="/login" (klasičen form submit bi prikazal surovi JSON).
+           Namesto tega se ob kliku pokliče doLogin() iz login.js, ki naredi fetch().
+           Inputa imata id="loginUser" in id="loginPass" kot zahteva login.js. -->
+      <div class="form-group">
+        <label class="form-label">E-pošta</label>
+        <input type="email" class="form-input" placeholder="tvoj@email.com" id="loginUser">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Geslo</label>
+        <input type="password" class="form-input" placeholder="••••••••" id="loginPass">
+      </div>
+      <p class="form-error" id="loginNapaka"></p>
+      <button class="form-submit" onclick="doLoginStran()">PRIJAVA →</button>
+
+      <!-- POPRAVEK: odstranjem komentar // ki se je izpisal kot besedilo na strani -->
+      <div class="form-footer">
+        Nimaš računa? <a href="registracija.html">Registriraj se</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // POPRAVEK: fetch login za samostojno prijavo.html stran.
+  // Po uspešni prijavi shrani token in preusmeri na index.html.
+  function doLoginStran() {
+    const email  = document.getElementById('loginUser').value.trim();
+    const geslo  = document.getElementById('loginPass').value.trim();
+    const napaka = document.getElementById('loginNapaka');
+
+    napaka.style.display = 'none';
+
+    if (!email || !geslo) {
+      napaka.textContent = 'Prosim vnesi email in geslo.';
+      napaka.style.display = 'block';
+      return;
+    }
+
+    fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: geslo })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        localStorage.setItem('token',    data.token);
+        localStorage.setItem('vloga',    data.uporabnik.vloga);
+        localStorage.setItem('username', data.uporabnik.username);
+        window.location.href = 'index.html';
+      } else {
+        napaka.textContent = data.error || 'Napaka pri prijavi.';
+        napaka.style.display = 'block';
+      }
+    })
+    .catch(() => {
+      napaka.textContent = 'Napaka pri povezavi s strežnikom.';
+      napaka.style.display = 'block';
+    });
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profil – Easy Rent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div id="app">
+
+  <nav class="navbar">
+    <div class="nav-logo" onclick="window.location='index.html'">EASY<span>RENT</span></div>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Domov</a>
+      <a class="nav-link" href="lestvica.html">Lestvica</a>
+      <a class="nav-link" href="statistika.html">Statistika</a>
+      <a class="nav-link" href="nepremicnine.html">Nepremičnine</a>
+      <a class="nav-link" href="forum.html">Forum</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="profil.html">Profil</a>
+    </div>
+    <div class="nav-actions">
+      <div id="userMenu" style="display:none;align-items:center;gap:0.5rem">
+        <div class="user-avatar" id="userAvatar" title="Profil">--</div>
+        <button class="btn-ghost" onclick="odjava()">Odjava</button>
+      </div>
+      <div id="authButtons" style="display:flex;gap:0.5rem">
+        <button class="btn-ghost" onclick="window.location='prijava.html'">Prijava</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Zaščitena vsebina — se prikaže šele po preverjanju JWT -->
+  <div id="profilZavrnjen" style="display:none;text-align:center;padding:4rem 2rem">
+    <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
+    <h2 style="font-family:'Poppins',sans-serif;font-size:1.8rem;margin-bottom:0.75rem">Potrebna je prijava!</h2>
+    <p style="color:var(--text-secondary);margin-bottom:1.5rem">Za ogled profila se morate prijaviti.</p>
+    <a href="prijava.html" class="btn-primary" style="text-decoration:none;padding:0.6rem 1.5rem">Prijava →</a>
+  </div>
+
+  <div id="profilVsebina" style="display:none">
+
+    <!-- HERO: avatar + statistika -->
+    <div class="profil-hero">
+      <div class="profil-avatar-wrap">
+        <div class="profil-avatar-xl" id="profilAvatarEl" title="Klikni za spremembo avatarja">--</div>
+        <div class="profil-avatar-hint" title="Uredi profil" onclick="switchProfilTab('uredi',document.querySelector('[data-tab=uredi]'))">✎</div>
+      </div>
+      <div class="profil-info">
+        <div class="profil-username" id="profilUsername">--</div>
+        <div class="profil-role" id="profilRole">-- VLOGA</div>
+        <div class="profil-badges" id="profilBadges"></div>
+        <div class="profil-meta" id="profilMeta">Nalaganje...</div>
+      </div>
+      <div class="profil-stats">
+        <div class="pstat"><div class="pstat-val" style="color:var(--accent-cyan)"  id="pWins">--</div><div class="pstat-key">Najemov</div></div>
+        <div class="pstat"><div class="pstat-val" style="color:var(--accent-green)" id="pTournaments">--</div><div class="pstat-key">Rezervacije</div></div>
+        <div class="pstat"><div class="pstat-val" style="color:var(--accent-purple)"id="pPoints">--</div><div class="pstat-key">Točke</div></div>
+        <div class="pstat"><div class="pstat-val" style="color:var(--accent-orange)"id="pRewards">--</div><div class="pstat-key">Nagrade</div></div>
+      </div>
+    </div>
+
+    <!-- ZAVIHKI -->
+    <div class="tabs" style="margin-bottom:1.5rem">
+      <button class="tab-btn active" data-tab="najemi"      onclick="switchProfilTab('najemi',this)">Zgodovina najemov</button>
+      <button class="tab-btn"        data-tab="rezervacije" onclick="switchProfilTab('rezervacije',this)">Moje rezervacije</button>
+      <button class="tab-btn"        data-tab="feedback"   onclick="switchProfilTab('feedback',this)">Ocene &amp; Feedback</button>
+      <button class="tab-btn"        data-tab="obvestila"  onclick="switchProfilTab('obvestila',this)">Obvestila</button>
+      <button class="tab-btn"        data-tab="uredi"      onclick="switchProfilTab('uredi',this)">Uredi profil</button>
+    </div>
+
+    <!-- TAB: Zgodovina tekem -->
+    <div id="tab-najemi">
+      <div class="section-title" style="margin-bottom:1rem">Zgodovina najemov</div>
+      <div id="najemiList">
+        <div class="table-loading">Nalaganje...</div>
+      </div>
+    </div>
+
+    <!-- TAB: Moje rezervacije -->
+    <div id="tab-rezervacije" style="display:none">
+      <div class="section-title" style="margin-bottom:1rem">Moje rezervacije</div>
+      <div id="rezervacijeList">
+        <div class="table-loading">Nalaganje...</div>
+      </div>
+    </div>
+
+    <!-- TAB: Ocene & Feedback -->
+    <div id="tab-feedback" style="display:none">
+      <div class="section-title" style="margin-bottom:1rem">Moje ocene nastanitev</div>
+      <div id="feedbackList" style="margin-bottom:2rem"></div>
+
+      <div class="edit-section">
+        <div class="section-title" style="font-size:1rem;margin-bottom:1rem">➕ Dodaj oceno nastanitve</div>
+        <div class="edit-grid" style="margin-bottom:1rem">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Nepremičnina</label>
+            <select class="form-input" id="feedbackTurnir">
+              <option value="">-- Izberi nepremičnino --</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Ocena</label>
+            <div class="stars-input" id="starsInput">
+              <span data-val="1" onclick="setStars(1)">★</span>
+              <span data-val="2" onclick="setStars(2)">★</span>
+              <span data-val="3" onclick="setStars(3)">★</span>
+              <span data-val="4" onclick="setStars(4)">★</span>
+              <span data-val="5" onclick="setStars(5)">★</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem">
+          <label class="form-label">Komentar</label>
+          <textarea class="form-input" id="feedbackBesedilo" rows="3" placeholder="Opiši svojo izkušnjo z nastanitvijo..." style="resize:vertical"></textarea>
+        </div>
+        <button class="save-btn" onclick="oddajFeedback()">Oddaj oceno ✓</button>
+      </div>
+    </div>
+
+    <!-- TAB: Obvestila -->
+    <div id="tab-obvestila" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div class="section-title">Obvestila</div>
+        <button onclick="preberiVsaObvestila()" style="background:none;border:1px solid var(--border);color:var(--text-secondary);padding:0.35rem 0.85rem;border-radius:8px;cursor:pointer;font-size:0.8rem">Označi vse kot prebrano</button>
+      </div>
+      <div class="edit-section" style="padding:0">
+        <div id="obvestilaList">
+          <div class="table-loading">Nalaganje...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Uredi profil -->
+    <div id="tab-uredi" style="display:none">
+      <div class="edit-section">
+        <div class="section-title" style="font-size:1.1rem;margin-bottom:1.25rem">Osnovni podatki</div>
+        <div class="edit-grid">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Uporabniško ime</label>
+            <input type="text" class="form-input" id="editUsername" placeholder="Tvoje uporabniško ime...">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">E-pošta</label>
+            <input type="email" class="form-input" id="editEmail" placeholder="email@primer.com">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Država</label>
+            <input type="text" class="form-input" id="editDrzava" placeholder="Slovenija">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Preferenca nastanitve</label>
+            <select class="form-input" id="editIgra">
+              <option value="">-- Vseeno --</option>
+              <option>Hiša</option>
+              <option>Apartma</option>
+              <option>Vila</option>
+              <option>Kabina</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:1.25rem">
+          <button class="save-btn" onclick="shranijProfil()">Shrani spremembe ✓</button>
+        </div>
+      </div>
+
+      <div class="edit-section">
+        <div class="section-title" style="font-size:1.1rem;margin-bottom:1.25rem">Spremeni geslo</div>
+        <div class="edit-grid">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Trenutno geslo</label>
+            <input type="password" class="form-input" id="editStaroGeslo" placeholder="••••••••">
+          </div>
+          <div></div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Novo geslo</label>
+            <input type="password" class="form-input" id="editNovoGeslo" placeholder="Min. 6 znakov">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Ponovi novo geslo</label>
+            <input type="password" class="form-input" id="editPonoviGeslo" placeholder="Ponovi geslo">
+          </div>
+        </div>
+        <div style="margin-top:1.25rem">
+          <button class="save-btn" onclick="spremiGeslo()">Posodobi geslo</button>
+        </div>
+      </div>
+
+      <div class="edit-section" style="border-color:rgba(255,68,102,0.25)">
+        <div class="section-title" style="font-size:1rem;color:#ff4466;margin-bottom:0.75rem">⚠️ Nevarno območje</div>
+        <p style="color:var(--text-secondary);font-size:0.88rem;margin-bottom:1rem">Brisanje računa je trajno in ga ni mogoče razveljaviti.</p>
+        <button class="danger-btn" onclick="potrdiIzbrisRacuna()">Izbriši račun</button>
+      </div>
+    </div>
+
+  </div><!-- /profilVsebina -->
+
+</div><!-- /app -->
+
+<script>
+/* stanje */
+const API = '';
+let trenutniUser = null;
+let izbranaZvezdica = 0;
+let userObvestila = [];
+
+/* init */
+document.addEventListener('DOMContentLoaded', () => {
+  const token    = localStorage.getItem('token');
+  const username = localStorage.getItem('username');
+  const vloga    = localStorage.getItem('vloga');
+  const uid      = localStorage.getItem('userId');
+
+  if (!token || !username) {
+    document.getElementById('profilZavrnjen').style.display = 'block';
+    return;
+  }
+
+  trenutniUser = { token, username, vloga, id: uid };
+
+  // Pokaži vsebino in nastavi navigacijo
+  document.getElementById('profilVsebina').style.display = 'block';
+  document.getElementById('authButtons').style.display   = 'none';
+  document.getElementById('userMenu').style.display      = 'flex';
+  document.getElementById('userAvatar').textContent      = username.substring(0,2).toUpperCase();
+
+  naloziProfilPodatke();
+  naloziNajeme();
+  naloziRezervacijeUporabnika();
+  naloziNepremicnineZaFeedback();
+  naloziObvestila();
+});
+
+/* zavihki (tabs) */
+function switchProfilTab(tab, btn) {
+  ['najemi','rezervacije','feedback','obvestila','uredi'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+/* profil podatki */
+async function naloziProfilPodatke() {
+  try {
+    const res  = await fetch(API + '/api/profil', {
+      headers: { 'Authorization': 'Bearer ' + trenutniUser.token }
+    });
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+
+    document.getElementById('profilAvatarEl').textContent  = d.username.substring(0,2).toUpperCase();
+    document.getElementById('profilUsername').textContent  = d.username;
+    document.getElementById('profilRole').textContent      = (d.vloga || 'najemnik').toUpperCase() + ' · ' + (d.email || '');
+    document.getElementById('pWins').textContent           = d.zmage ?? 0;
+    document.getElementById('pTournaments').textContent    = d.turnirji ?? 0;
+    document.getElementById('pPoints').textContent         = d.tocke ?? 0;
+    document.getElementById('pRewards').textContent        = d.nagrade ?? 0;
+    document.getElementById('profilMeta').textContent      = 'Registriran: ' + (d.datum_registracije ? new Date(d.datum_registracije).toLocaleDateString('sl-SI') : '--') + (d.drzava ? '  🌍 ' + d.drzava : '');
+
+    // Nagrde značke
+    const badges = [];
+    if ((d.zmage ?? 0) >= 10) badges.push('<span class="badge badge-pro">TOP NAJEMNIK</span>');
+    if ((d.zmage ?? 0) >= 5)  badges.push('<span class="badge badge-mvp">ZANESLJIV</span>');
+    if ((d.turnirji ?? 0) >= 3) badges.push('<span class="badge badge-veteran">Izkušen</span>');
+    document.getElementById('profilBadges').innerHTML = badges.join('');
+
+    // Predpolni uredi obrazec
+    document.getElementById('editUsername').value = d.username || '';
+    document.getElementById('editEmail').value    = d.email    || '';
+    document.getElementById('editDrzava').value   = d.drzava   || '';
+    if (d.najljubsa_igra) document.getElementById('editIgra').value = d.najljubsa_igra;
+
+  } catch {
+    // Fallback: prikaži kar je v localStorage
+    const u = trenutniUser.username;
+    document.getElementById('profilAvatarEl').textContent = u.substring(0,2).toUpperCase();
+    document.getElementById('profilUsername').textContent = u;
+    document.getElementById('profilRole').textContent     = (trenutniUser.vloga || 'najemnik').toUpperCase();
+    document.getElementById('profilMeta').textContent     = 'Ni podatkov s strežnika';
+    document.getElementById('editUsername').value         = u;
+    // Nastavi prazne statistike
+    ['pWins','pTournaments','pPoints','pRewards'].forEach(id => {
+      document.getElementById(id).textContent = '0';
+    });
+  }
+}
+
+/* ────── ZGODOVINA NAJEMOV ────── */
+async function naloziNajeme() {
+  const el = document.getElementById('najemiList');
+  try {
+    const res  = await fetch(API + '/api/profil/najemi', {
+      headers: { 'Authorization': 'Bearer ' + trenutniUser.token }
+    });
+    if (!res.ok) throw new Error();
+    const tekme = await res.json();
+
+    if (!tekme.length) {
+      el.innerHTML = '<div class="table-loading">Še nimate zaključenih najemov.</div>';
+      return;
+    }
+
+    el.innerHTML = tekme.map(t => {
+      const cena  = t.rezultat || (t.tocke_ekip !== undefined ? t.tocke_ekip : t.cena) || '--';
+      return `
+        <div class="match-card">
+          <div class="match-result-badge match-win">
+            <div style="font-size:0.9rem;font-weight:900">✓</div>
+          </div>
+          <div class="match-card-info">
+            <div class="match-title">Najem — ${t.ime_turnirja || t.turnir || '--'}</div>
+            <div class="match-sub">${t.igra || '--'} · ${t.lokacija || t.nasprotnik || t.ekipa || '--'}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.25rem">
+            <div class="match-card-score" style="color:#3f8f5f">${cena} €</div>
+            <div style="font-size:0.72rem;color:var(--text-muted)">${t.datum ? new Date(t.datum).toLocaleDateString('sl-SI') : ''}</div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch {
+    el.innerHTML = '<div class="table-loading">Napaka pri nalaganju najemov.</div>';
+  }
+}
+
+/* rezervacije uporabnika */
+async function naloziRezervacijeUporabnika() {
+  const el = document.getElementById('rezervacijeList');
+  try {
+    const res = await fetch(API + '/api/profil/rezervacije', {
+      headers: { 'Authorization': 'Bearer ' + trenutniUser.token }
+    });
+    if (!res.ok) throw new Error();
+    const lista = await res.json();
+
+    if (!lista.length) {
+      el.innerHTML = '<div class="table-loading">Nimate še nobene rezervacije.</div>';
+      return;
+    }
+    el.innerHTML = lista.map(t => {
+      const statusColor = t.status === 'active' ? 'var(--accent-green)' : t.status === 'upcoming' ? 'var(--accent-cyan)' : 'var(--text-muted)';
+      const nagrada     = t.uvrstitev ? nagradeHtml(t.uvrstitev) : '';
+      return `
+        <div class="match-card">
+          <div style="width:48px;height:48px;border-radius:12px;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">🏠</div>
+          <div class="match-card-info">
+            <div class="match-title">${t.ime_turnirja || '--'}</div>
+            <div class="match-sub">${t.igra || '--'} · ${t.lokacija || '--'} · ${t.datum ? new Date(t.datum).toLocaleDateString('sl-SI') : '--'}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.35rem">
+            <span style="font-size:0.78rem;font-weight:700;color:${statusColor};text-transform:uppercase">${t.status || '--'}</span>
+            ${nagrada}
+          </div>
+        </div>`;
+    }).join('');
+  } catch {
+    el.innerHTML = '<div class="table-loading">Napaka pri nalaganju rezervacij.</div>';
+  }
+}
+
+function nagradeHtml(uvrstitev) {
+  if (uvrstitev === 1) return '<span class="reward-badge reward-gold">🥇 1. mesto</span>';
+  if (uvrstitev === 2) return '<span class="reward-badge reward-silver">🥈 2. mesto</span>';
+  if (uvrstitev === 3) return '<span class="reward-badge reward-bronze">🥉 3. mesto</span>';
+  return `<span class="reward-badge">${uvrstitev}. mesto</span>`;
+}
+
+/* feedback */
+async function naloziNepremicnineZaFeedback() {
+  try {
+    const res  = await fetch(API + '/api/nepremicnine');
+    const data = await res.json();
+    const sel  = document.getElementById('feedbackTurnir');
+    if (Array.isArray(data)) {
+      data.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.ID_Turnir || t.id;
+        opt.textContent = t.Ime_turnirja || t.ime_turnirja || t.ime || ('Nepremičnina #' + (t.ID_Turnir || t.id));
+        sel.appendChild(opt);
+      });
+    }
+  } catch { /* tiho */ }
+
+  // Naloži obstoječe ocene
+  naloziMojFeedback();
+}
+
+async function naloziMojFeedback() {
+  const el = document.getElementById('feedbackList');
+  try {
+    const res  = await fetch(API + '/api/profil/feedback', {
+      headers: { 'Authorization': 'Bearer ' + trenutniUser.token }
+    });
+    if (!res.ok) throw new Error();
+    const lista = await res.json();
+
+    if (!lista.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem">Še niste oddali nobene ocene.</div>';
+      return;
+    }
+    el.innerHTML = lista.map(f => `
+      <div class="feedback-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+          <div style="font-weight:700">${f.ime_turnirja || 'Nepremičnina #' + f.TK_Forum}</div>
+          <div class="stars">${'★'.repeat(f.Ocena || f.ocena)}${'☆'.repeat(5 - (f.Ocena || f.ocena))}</div>
+        </div>
+        <div style="color:var(--text-secondary);font-size:0.88rem">${f.Besedilo || f.besedilo || ''}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem">${f.datum ? new Date(f.datum).toLocaleDateString('sl-SI') : ''}</div>
+      </div>`).join('');
+  } catch {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem">Napaka pri nalaganju ocen.</div>';
+  }
+}
+
+function setStars(n) {
+  izbranaZvezdica = n;
+  document.querySelectorAll('#starsInput span').forEach((s, i) => {
+    s.classList.toggle('active', i < n);
+  });
+}
+
+async function oddajFeedback() {
+  const nepremicninaId = document.getElementById('feedbackTurnir').value;
+  const besedilo   = document.getElementById('feedbackBesedilo').value.trim();
+  const ocena      = izbranaZvezdica;
+
+  if (!nepremicninaId) { showToast('Izberi nepremičnino!', 'warn'); return; }
+  if (!ocena)    { showToast('Označi oceno (zvezde)!', 'warn'); return; }
+  if (!besedilo) { showToast('Vnesi komentar!', 'warn'); return; }
+
+  try {
+    const res = await fetch(API + '/api/feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + trenutniUser.token
+      },
+      body: JSON.stringify({ TK_Turnir: nepremicninaId, Besedilo: besedilo, Ocena: ocena })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast('Ocena uspešno oddana! ⭐', 'ok');
+      document.getElementById('feedbackBesedilo').value = '';
+      izbranaZvezdica = 0;
+      setStars(0);
+      document.getElementById('feedbackTurnir').value = '';
+      naloziMojFeedback();
+    } else {
+      showToast(data.error || 'Napaka pri oddaji.', 'err');
+    }
+  } catch {
+    showToast('Napaka strežnika.', 'err');
+  }
+}
+
+/* obvestila */
+async function naloziObvestila() {
+  const el = document.getElementById('obvestilaList');
+  try {
+    const res  = await fetch(API + '/api/obvestila', {
+      headers: { 'Authorization': 'Bearer ' + trenutniUser.token }
+    });
+    if (!res.ok) throw new Error();
+    userObvestila = await res.json();
+    renderObvestila();
+  } catch {
+    el.innerHTML = '<div class="table-loading">Ni obvestil.</div>';
+  }
+}
+
+function renderObvestila() {
+  const el = document.getElementById('obvestilaList');
+  if (!userObvestila.length) {
+    el.innerHTML = '<div class="table-loading">Ni obvestil.</div>';
+    return;
+  }
+  el.innerHTML = userObvestila.map(o => `
+    <div class="profil-notif-item" id="notif-${o.ID_Obvestila || o.id}">
+      <div class="profil-notif-dot ${o.prebrano ? 'read' : ''}"></div>
+      <div class="profil-notif-text">
+        <div style="font-weight:${o.prebrano ? '400' : '700'}">${o.Vsebina || o.vsebina}</div>
+        <div class="profil-notif-time">${o.cas || o.datum || ''}</div>
+      </div>
+      ${!o.prebrano ? `<button onclick="preberiObvestilo(${o.ID_Obvestila || o.id})" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:0.25rem 0.6rem;border-radius:6px;cursor:pointer;font-size:0.75rem">✓</button>` : ''}
+    </div>`).join('');
+}
+
+async function preberiObvestilo(id) {
+  try {
+    await fetch(API + '/api/obvestila/' + id + '/preberi', {
+      method: 'PUT',
+      headers: { 'Authorization': 'Bearer ' + trenutniUser.token }
+    });
+    userObvestila = userObvestila.map(o => (o.ID_Obvestila || o.id) === id ? { ...o, prebrano: true } : o);
+    renderObvestila();
+  } catch { /* tiho */ }
+}
+
+function preberiVsaObvestila() {
+  userObvestila.forEach(o => preberiObvestilo(o.ID_Obvestila || o.id));
+}
+
+/* urejanje profila */
+async function shranijProfil() {
+  const body = {
+    Username: document.getElementById('editUsername').value.trim(),
+    Email:    document.getElementById('editEmail').value.trim(),
+    Drzava:   document.getElementById('editDrzava').value.trim(),
+    Igra:     document.getElementById('editIgra').value
+  };
+
+  if (!body.Username || !body.Email) { showToast('Ime in email sta obvezna!', 'warn'); return; }
+
+  try {
+    const res  = await fetch(API + '/api/profil', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + trenutniUser.token
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (res.ok) {
+      localStorage.setItem('username', body.Username);
+      showToast('Profil uspešno posodobljen! ✓', 'ok');
+      naloziProfilPodatke();
+    } else {
+      showToast(data.error || 'Napaka.', 'err');
+    }
+  } catch {
+    showToast('Napaka strežnika.', 'err');
+  }
+}
+
+async function spremiGeslo() {
+  const staro  = document.getElementById('editStaroGeslo').value;
+  const novo   = document.getElementById('editNovoGeslo').value;
+  const ponovi = document.getElementById('editPonoviGeslo').value;
+
+  if (!staro || !novo) { showToast('Vnesite staro in novo geslo!', 'warn'); return; }
+  if (novo !== ponovi) { showToast('Novi gesli se ne ujemata!', 'warn'); return; }
+  if (novo.length < 6) { showToast('Novo geslo mora imeti vsaj 6 znakov!', 'warn'); return; }
+
+  try {
+    const res  = await fetch(API + '/api/profil/geslo', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + trenutniUser.token
+      },
+      body: JSON.stringify({ staroGeslo: staro, novoGeslo: novo })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast('Geslo uspešno posodobljeno! 🔒', 'ok');
+      ['editStaroGeslo','editNovoGeslo','editPonoviGeslo'].forEach(id => document.getElementById(id).value = '');
+    } else {
+      showToast(data.error || 'Napaka pri spremembi gesla.', 'err');
+    }
+  } catch {
+    showToast('Napaka strežnika.', 'err');
+  }
+}
+
+async function potrdiIzbrisRacuna() {
+  const conf = confirm('SI PREPRIČAN? Brisanje računa je trajno in ga ni mogoče razveljaviti!');
+  if (!conf) return;
+  const conf2 = confirm('Zadnja potrditev: res želiš izbrisati račun?');
+  if (!conf2) return;
+  try {
+    const res = await fetch(API + '/api/profil', {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + trenutniUser.token }
+    });
+    if (res.ok) {
+      odjava();
+      window.location.href = 'index.html';
+    } else {
+      showToast('Napaka pri brisanju računa.', 'err');
+    }
+  } catch {
+    showToast('Napaka strežnika.', 'err');
+  }
+}
+
+/* pomozne funkkcije */
+function odjava() {
+  ['token','vloga','username','userId'].forEach(k => localStorage.removeItem(k));
+  window.location.href = 'index.html';
+}
+
+function showToast(msg, tip = 'ok') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  const col = tip === 'err' ? '#ff4466' : tip === 'warn' ? '#ffc800' : 'var(--accent-green)';
+  t.style.borderLeft = '3px solid ' + col;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+</script>
+
+</body>
+</html> 

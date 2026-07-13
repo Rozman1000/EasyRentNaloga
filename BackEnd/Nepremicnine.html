@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nepremičnine – Easy Rent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div id="app">
+
+  <!-- Navigacijska vrstica, skupna vsem podstranem -->
+  <nav class="navbar">
+    <div class="nav-logo" onclick="window.location='index.html'">EASY<span>RENT</span></div>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Domov</a>
+      <a class="nav-link" href="lestvica.html">Lestvica</a>
+      <a class="nav-link" href="statistika.html">Statistika</a>
+      <a class="nav-link active" href="nepremicnine.html">Nepremičnine</a>
+      <a class="nav-link" href="forum.html">Forum</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="profil.html">Profil</a>
+    </div>
+    <div class="nav-actions">
+      <button class="btn-ghost" onclick="openModal('login')" style="margin-right:0.5rem">Prijava</button>
+      <button class="btn-primary" onclick="openModal('register')">Registracija</button>
+    </div>
+  </nav>
+
+  <!-- Modalni dialog za avtentikacijo (skupen vsem podstranem). -->
+  <div class="modal-overlay" id="authModal" onclick="closeModalOutside(event)">
+    <div class="modal">
+      <div class="modal-close" onclick="closeModal()">&#x2715;</div>
+      <div class="modal-header">
+        <div class="modal-title">Easy Rent</div>
+        <div class="modal-sub">Prijava v svoj račun</div>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('login')">Prijava</button>
+        <button class="modal-tab" onclick="switchTab('register')">Registracija</button>
+      </div>
+
+      <!-- Prijavni obrazec -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">Uporabniško ime / E-pošta</label>
+          <input type="text" class="form-input" placeholder="Vnesi email..." id="loginUser">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" id="loginPass">
+        </div>
+        <p id="loginNapaka" class="form-error"></p>
+        <button class="form-submit" onclick="doLogin()">PRIJAVA</button>
+      </div>
+
+      <!-- Registracijski obrazec (privzeto skrit) -->
+      <div id="registerForm" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Uporabniško ime</label>
+          <input type="text" class="form-input" id="preveriGamerTag" placeholder="Kako naj te kličemo?">
+          <p class="form-error-mt" id="napakaGamerTag"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-pošta</label>
+          <input type="email" class="form-input" id="preveriEPosta" placeholder="email@primer.com">
+          <p class="form-error-mt" id="napakaEPosta"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" id="preveriGeslo" placeholder="Min. 8 znakov...">
+          <p class="form-error-mt" id="napakaGesla"></p>
+        </div>
+        <button class="form-submit" onclick="doRegister()">USTVARI RAČUN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modalni dialog s podrobnostmi nepremičnine (napolni se dinamično ob kliku na kartico). -->
+  <div class="modal-overlay" id="propertyModal" onclick="closePropertyModal(event)" style="display:none">
+    <div class="modal" style="width:560px;max-width:95vw">
+      <div class="modal-close" onclick="document.getElementById('propertyModal').style.display='none'">&#x2715;</div>
+      <div id="propertyModalContent"></div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Glavna vsebina strani -->
+  <div class="page active" id="propertiesPage">
+
+    <div style="margin-bottom:1.5rem">
+      <h1 class="section-title" style="font-size:2rem;margin-bottom:0.5rem">Nepremičnine</h1>
+      <p style="color:var(--text-secondary);font-size:0.9rem">Prosta, kmalu prosta in trenutno zasedena bivališča za najem</p>
+    </div>
+
+    <!-- Kratka predstavitev — statične oznake, brez potrebe po osveževanju iz baze. -->
+    <div class="feature-strip" style="margin-bottom:2rem">
+      <div class="feature-chip">🏠 <span>Hiše, apartmaji, vile in kabine</span></div>
+      <div class="feature-chip">📅 <span>Kratkoročni in dolgoročni najem</span></div>
+      <div class="feature-chip">🔎 <span>Filtriraj po tipu in statusu</span></div>
+      <div class="feature-chip">📍 <span>Lokacija na zemljevidu za prijavljene</span></div>
+    </div>
+
+    <!-- Filtri po tipu nepremičnine in statusu. applyPropertyFilters() združi vse aktivne filtre. -->
+    <div class="filter-bar">
+      <input type="text" class="search-input" id="propertySearch" placeholder="Išči po nazivu ali kraju..." oninput="applyPropertyFilters()">
+      <button class="filter-chip active" onclick="setTypeFilter('all', this)">Vse vrste</button>
+      <button class="filter-chip" onclick="setTypeFilter('Hiša', this)">Hiša</button>
+      <button class="filter-chip" onclick="setTypeFilter('Apartma', this)">Apartma</button>
+      <button class="filter-chip" onclick="setTypeFilter('Vila', this)">Vila</button>
+      <button class="filter-chip" onclick="setTypeFilter('Kabina', this)">Kabina</button>
+    </div>
+
+    <!-- Filtri po statusu nepremičnine -->
+    <div class="tabs" style="margin-bottom:1.5rem">
+      <button class="tab-btn active" onclick="setStatusFilter('all', this)">Vse</button>
+      <button class="tab-btn" onclick="setStatusFilter('live', this)">Prosto</button>
+      <button class="tab-btn" onclick="setStatusFilter('upcoming', this)">Kmalu prosto</button>
+      <button class="tab-btn" onclick="setStatusFilter('completed', this)">Zasedeno</button>
+    </div>
+
+    <!-- Mreža kartic nepremičnin. Vsebina se generira dinamično z renderProperties() spodaj. -->
+    <div class="cards-grid" id="propertiesGrid"></div>
+
+    <!-- Zemljevid lokacije — prikaže se samo prijavljenim uporabnikom. -->
+    <div style="margin: 3rem 0 1rem;">
+      <h2 class="section-title" style="font-size: 1.5rem; margin-bottom: 1rem;">Lokacija izbrane nepremičnine</h2>
+
+      <!-- Prikazano NEprijavljenim uporabnikom namesto zemljevida -->
+      <div id="mapLoginNotice" class="empty-state" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg)">
+        <div class="empty-icon">🔒</div>
+        <div class="empty-text">Zemljevid je na voljo samo prijavljenim uporabnikom</div>
+        <div class="empty-sub">Prijavi se, da vidiš natančno lokacijo nepremičnine na zemljevidu.</div>
+      </div>
+
+      <!-- Prikazano prijavljenim uporabnikom; skrito privzeto (glej preveriPrijavo spodaj) -->
+      <div id="mapWrap" style="display:none;border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem" id="mapHint">Klikni na nepremičnino zgoraj, da jo prikažeš na zemljevidu.</p>
+        <gmp-map
+          id="mainMap"
+          center="46.0569,14.5058"
+          zoom="8"
+          map-id="DEMO_MAP_ID"
+          style="height: 450px; width: 100%;">
+          <gmp-advanced-marker id="mainMarker" position="46.0569,14.5058"></gmp-advanced-marker>
+        </gmp-map>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <div class="footer-logo">EASYRENT</div>
+    <p>&copy; 2026 Easy Rent &middot; Preprosto oddajanje in najemanje nepremičnin &middot; Slovenija</p>
+  </div>
+
+</div><!-- /#app -->
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBd4xkwzYtQfLznwWGH55kQpobSQOUUzYo&libraries=maps,marker&v=beta"></script>
+<script src="login.js"></script>
+<script src="registracija.js"></script>
+
+<script>
+/*
+ * nepremicnine.html — seznam nepremičnin za najem.
+ *
+ * OPOMBA ZA PREGLED: prej je ta stran prikazovala turnirje (ekipe, igre,
+ * nagradni sklad). Zdaj prikazuje nepremičnine za najem: ime, tip, lokacijo,
+ * ceno na noč in trenutno zasedenost. Klik na kartico odpre podrobnosti in
+ * (če si prijavljen) pokaže lokacijo na Google Maps.
+ */
+
+let properties = [];
+let activeTypeFilter = 'all';
+let activeStatusFilter = 'all';
+
+// naloži nepremičnine iz backend API-ja
+async function fetchPropertiesFromDB() {
+    try {
+        const response = await fetch('/api/nepremicnine');
+        let data = await response.json();
+        // Sortiranje: najnovejši datumi razpoložljivosti so na vrhu
+        properties = data.sort((a, b) => new Date(b.Datum) - new Date(a.Datum));
+        applyPropertyFilters();
+    } catch (err) {
+        console.error('Napaka pri nalaganju nepremičnin:', err);
+        showToast('Napaka pri povezavi s strežnikom.');
+    }
+}
+
+// filtri
+function applyPropertyFilters() {
+    const q = (document.getElementById('propertySearch')?.value || '').toLowerCase();
+
+    const list = properties.filter(p => {
+        const ime    = (p.Ime_turnirja || p.ime || "").toLowerCase();
+        const kraj   = (p.Lokacija || p.lokacija || "").toLowerCase();
+        const tip    = (p.Naslov_igre || p.tip || "");
+        const status = (p.Status || p.status || 'upcoming').toLowerCase();
+
+        const matchSearch = ime.includes(q) || kraj.includes(q);
+        const matchType   = activeTypeFilter === 'all' || tip === activeTypeFilter;
+        const matchStatus = activeStatusFilter === 'all' || status === activeStatusFilter.toLowerCase();
+
+        return matchSearch && matchType && matchStatus;
+    });
+
+    renderProperties(list);
+}
+
+// izris kartic
+function renderProperties(list) {
+    const grid = document.getElementById('propertiesGrid');
+    if (!list.length) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🏠</div><div class="empty-text">Ni najdenih nepremičnin</div><div class="empty-sub">Poskusi spremeniti filtre ali iskalni niz.</div></div>';
+        return;
+    }
+
+    grid.innerHTML = list.map(p => {
+        const zasedenostPct = Math.round((p.Prijavljene_ekipe / p.Max_ekip) * 100) || 0;
+        const status = p.Status || 'upcoming';
+        const statusLabel = status.toLowerCase() === 'live' ? 'Prosto' : status.toLowerCase() === 'completed' ? 'Zasedeno' : 'Kmalu prosto';
+
+        return `
+        <div class="tournament-card" onclick="openProperty(${p.ID_Turnir})">
+            <div class="t-card-header">
+                <div class="t-status ${status.toLowerCase()}">${statusLabel}</div>
+                <div class="t-name">${p.Ime_turnirja}</div>
+                <span class="t-game" style="background:var(--bg-elevated); color:var(--accent-cyan)">
+                    ${p.Naslov_igre || 'Nepremičnina'}
+                </span>
+            </div>
+            <div class="t-meta">
+                <div class="t-meta-row"><span class="t-meta-key">Na voljo od</span><span class="t-meta-value">${new Date(p.Datum).toLocaleDateString('sl-SI')}</span></div>
+                <div class="t-meta-row"><span class="t-meta-key">Lokacija</span><span class="t-meta-value">${p.Lokacija}</span></div>
+            </div>
+            <div class="t-progress">
+                <div class="t-progress-label"><span>Zasedenost gostov</span><span>${p.Prijavljene_ekipe} / ${p.Max_ekip}</span></div>
+                <div class="bar-track"><div class="bar-fill" style="width:${zasedenostPct}%"></div></div>
+            </div>
+            <div class="t-footer">
+                <div><div class="t-prize-label">Cena na noč</div><div class="t-prize">${p.Nagradni_sklad} €</div></div>
+                <button class="btn-primary" onclick="event.stopPropagation(); rezervirajNepremicnino(${p.ID_Turnir})">Rezerviraj</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// podrobnosti + zemljevid (samo za prijavljene uporabnike)
+function openProperty(id) {
+    const p = properties.find(x => x.ID_Turnir === id);
+    if (!p) return;
+
+    document.getElementById('propertyModalContent').innerHTML = `
+        <div class="t-modal-header">
+            <div class="t-status ${(p.Status || 'upcoming').toLowerCase()}">${p.Status || 'Kmalu prosto'}</div>
+            <div class="t-modal-name">${p.Ime_turnirja}</div>
+        </div>
+        <p>Tip: ${p.Naslov_igre || 'Nepremičnina'}</p>
+        <p>Lokacija: ${p.Lokacija}</p>
+        <p>Cena: ${p.Nagradni_sklad} € / noč</p>
+        <div style="margin-top: 1rem;">
+            <button class="btn-primary" style="width:100%" onclick="rezervirajNepremicnino(${p.ID_Turnir})">Rezerviraj bivanje</button>
+        </div>
+    `;
+    document.getElementById('propertyModal').style.display = 'flex';
+
+    // Zemljevid se posodobi samo, če je uporabnik prijavljen (glej preveriPrijavo)
+    if (localStorage.getItem('token')) {
+        updateMap(p.Lat, p.Lng, p.Ime_turnirja);
+    }
+}
+
+function closePropertyModal(e) {
+    if (e.target.id === 'propertyModal') document.getElementById('propertyModal').style.display = 'none';
+}
+
+// filtri in pomožne funkcije
+function setStatusFilter(status, el) {
+    activeStatusFilter = status;
+    const filterContainer = el.parentElement;
+    filterContainer.querySelectorAll('.tab-btn, .filter-chip').forEach(btn => btn.classList.remove('active'));
+    el.classList.add('active');
+    applyPropertyFilters();
+}
+
+function setTypeFilter(tip, el) {
+    activeTypeFilter = tip;
+    const container = el.closest('.filter-bar') || el.parentElement;
+    container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    applyPropertyFilters();
+}
+
+// Zemljevid se centrira na izbrano nepremičnino. Kliče se samo, če je uporabnik prijavljen.
+function updateMap(lat, lng, title) {
+    const mapElement = document.getElementById('mainMap');
+    const markerElement = document.getElementById('mainMarker');
+    if (lat && lng && mapElement && markerElement) {
+        const position = { lat: parseFloat(lat), lng: parseFloat(lng) };
+        mapElement.center = position;
+        markerElement.position = position;
+        markerElement.title = title;
+        mapElement.zoom = 14;
+        document.getElementById('mapHint').textContent = `Prikazana lokacija: ${title}`;
+    }
+}
+
+// Skrije zemljevid neprijavljenim uporabnikom in ga prikaže prijavljenim.
+// To je namerna omejitev iz zahteve: "Google Maps deluje, a le če je uporabnik prijavljen."
+function preveriDostopDoZemljevida() {
+    const prijavljen = !!localStorage.getItem('token');
+    document.getElementById('mapLoginNotice').style.display = prijavljen ? 'none' : 'block';
+    document.getElementById('mapWrap').style.display         = prijavljen ? 'block' : 'none';
+}
+
+function rezervirajNepremicnino(id) {
+    const p = properties.find(x => x.ID_Turnir === id);
+    if (!localStorage.getItem('token')) {
+        showToast('Za rezervacijo se moraš najprej prijaviti.');
+        openModal('login');
+        return;
+    }
+    showToast(`Rezervacija za "${p.Ime_turnirja}" je bila poslana!`);
+}
+
+function showToast(msg) {
+    const c = document.getElementById('toastContainer');
+    if (!c) return;
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<div>${msg}</div>`;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
+/* ── modal / avtentikacija (skupno vsem podstranem) ── */
+function openModal(tab) {
+    document.getElementById('authModal').style.display = 'flex';
+    switchTab(tab);
+}
+function closeModal() { document.getElementById('authModal').style.display = 'none'; }
+function closeModalOutside(e) { if (e.target.id === 'authModal') closeModal(); }
+function switchTab(t) {
+    document.getElementById('loginForm').style.display    = t === 'login'    ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = t === 'register' ? 'block' : 'none';
+    document.querySelectorAll('.modal-tab').forEach((b, i) =>
+        b.classList.toggle('active', (i === 0 && t === 'login') || (i === 1 && t === 'register'))
+    );
+}
+function odjava() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('vloga');
+    localStorage.removeItem('username');
+    preveriDostopDoZemljevida();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetchPropertiesFromDB();
+    preveriDostopDoZemljevida();
+});
+</script>
+
+</body>
+</html>

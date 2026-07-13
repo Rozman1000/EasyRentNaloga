@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel – Easy Rent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div id="app">
+
+  <nav class="navbar">
+    <div class="nav-logo" onclick="window.location='index.html'">EASY<span>RENT</span></div>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Domov</a>
+      <a class="nav-link" href="lestvica.html">Lestvica</a>
+      <a class="nav-link" href="statistika.html">Statistika</a>
+      <a class="nav-link" href="nepremicnine.html">Nepremičnine</a>
+      <a class="nav-link" href="forum.html">Forum</a>
+      <a class="nav-link active" href="admin.html">Admin</a>
+      <a class="nav-link" href="profil.html">Profil</a>
+    </div>
+    <div class="nav-actions">
+      <div id="userMenu" style="display:none;align-items:center;gap:.5rem">
+        <div class="user-avatar" id="userAvatar" title="Profil">--</div>
+        <button class="btn-ghost" onclick="odjava()">Odjava</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Zavrnjen dostop -->
+  <div class="page active" id="adminPage">
+    <div id="adminZavrnjen" style="display:none;text-align:center;padding:4rem 2rem">
+      <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
+      <h2 style="font-family:'Poppins',sans-serif;font-size:1.8rem;margin-bottom:.75rem">Dostop zavrnjen</h2>
+      <p style="color:var(--text-secondary);margin-bottom:1.5rem">Ta stran je dostopna samo administratorjem.</p>
+      <a href="index.html" class="btn-primary" style="text-decoration:none;padding:.6rem 1.5rem">← Nazaj na domov</a>
+    </div>
+
+    <div id="adminVsebina" style="display:none">
+      <div style="margin-bottom:1.5rem">
+        <h1 class="section-title" style="font-size:2rem;margin-bottom:.5rem">Admin Nadzorna Plošča</h1>
+        <p style="color:var(--text-secondary);font-size:.9rem">Upravljanje platforme, moderiranje oglasov, komentarjev in uporabnikov</p>
+      </div>
+
+      <!-- Statistika -->
+      <div class="admin-grid" style="margin-bottom:2rem">
+        <div class="admin-card"><div class="admin-icon">⏳</div><div><div class="admin-val" id="adminPendingApproval">--</div><div class="admin-label">Čaka na potrditev</div></div></div>
+        <div class="admin-card"><div class="admin-icon">👥</div><div><div class="admin-val" id="adminTotalUsers">--</div><div class="admin-label">Skupaj uporabnikov</div></div></div>
+        <div class="admin-card"><div class="admin-icon">🚨</div><div><div class="admin-val" id="adminReportedContent">--</div><div class="admin-label">Moderacij danes</div></div></div>
+        <div class="admin-card"><div class="admin-icon">🏆</div><div><div class="admin-val" id="adminActiveListings">--</div><div class="admin-label">Aktivnih nepremičnin</div></div></div>
+      </div>
+
+      <!-- Admin zavihki -->
+      <div class="admin-tabs">
+        <div class="admin-tab active" onclick="switchAdminTab('nepremicnine', this)">Nepremičnine</div>
+        <div class="admin-tab" onclick="switchAdminTab('moderacija', this)">Moderacija</div>
+        <div class="admin-tab" onclick="switchAdminTab('uporabniki', this)">Uporabniki</div>
+        <div class="admin-tab" onclick="switchAdminTab('forum', this)">Forum Komentarji</div>
+        <div class="admin-tab" onclick="switchAdminTab('feedback', this)">Feedback Ocene</div>
+      </div>
+
+      <!-- tab nepremičnine (DB tabela "Turnir" zdaj hrani nepremičnine, glej opombo v server.js) -->
+      <div id="adminTab-nepremicnine">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div class="section-title">Upravljanje nepremičnin</div>
+        </div>
+        <div id="adminNepremicnine" style="margin-bottom:2rem"></div>
+
+        <div class="section-title" style="margin-bottom:1rem">Nepremičnine čakajo na odobritev</div>
+        <div id="pendingTournaments"></div>
+      </div>
+
+      <!-- tab moderacija -->
+      <div id="adminTab-moderacija" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div class="section-title">Moderacijski ukrepi</div>
+          <button class="action-btn btn-cyan" onclick="odpriModModal()">+ Dodaj ukrep</button>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+          <table class="mod-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nepremičnina / Vsebina</th>
+                <th>Datum</th>
+                <th>Razlog</th>
+                <th>Vrsta ukrepa</th>
+                <th>Dejanja</th>
+              </tr>
+            </thead>
+            <tbody id="moderacijaBody">
+              <tr><td colspan="6" class="table-loading">Nalaganje...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- tab uporabniki -->
+      <div id="adminTab-uporabniki" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <div class="section-title">Upravljanje uporabnikov</div>
+          <input type="text" class="form-input" id="userSearch" placeholder="Išči po username..." style="width:220px;padding:.4rem .8rem" oninput="filtrirajUporabnike(this.value)">
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+          <table class="mod-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Uporabnik</th>
+                <th>E-pošta</th>
+                <th>Vloga</th>
+                <th>Status</th>
+                <th>Dejanja</th>
+              </tr>
+            </thead>
+            <tbody id="uporabnikiBody">
+              <tr><td colspan="6" class="table-loading">Nalaganje...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- tab forum -->
+      <div id="adminTab-forum" style="display:none">
+        <div class="section-title" style="margin-bottom:1rem">Moderiranje forum objav</div>
+        <div id="forumModList"></div>
+      </div>
+
+      <!-- tab feedback -->
+      <div id="adminTab-feedback" style="display:none">
+        <div class="section-title" style="margin-bottom:1rem">Pregled ocen nepremičnin</div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+          <table class="mod-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nepremičnina / Forum</th>
+                <th>Uporabnik</th>
+                <th>Ocena</th>
+                <th>Komentar</th>
+                <th>Dejanja</th>
+              </tr>
+            </thead>
+            <tbody id="feedbackBody">
+              <tr><td colspan="6" class="table-loading">Nalaganje...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /adminVsebina -->
+  </div><!-- /adminPage -->
+
+</div><!-- /app -->
+
+<!-- Modal: Dodaj moderacijski ukrep -->
+<div class="mod-modal-overlay" id="modModal" onclick="zapriModModal(event)">
+  <div class="mod-modal">
+    <div style="font-family:'Poppins',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:1.25rem">Dodaj moderacijski ukrep</div>
+    <div class="form-group">
+      <label class="form-label">Nepremičnina (ID)</label>
+      <select class="form-input" id="modNepremicninaId">
+        <option value="">-- Izberi nepremičnino --</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Vrsta ukrepa</label>
+      <select class="form-input" id="modVrsta">
+        <option value="brisanje">Brisanje vsebine</option>
+        <option value="blokiranje">Blokiranje vsebine</option>
+        <option value="opozorilo">Opozorilo</option>
+        <option value="potrditev">Potrditev nepremičnine</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Razlog</label>
+      <textarea class="form-input" id="modRazlog" rows="3" placeholder="Opiši razlog za ukrep..."></textarea>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:1rem">
+      <button class="btn-primary" onclick="shraniModeracijskiUkrep()" style="flex:1">Shrani ukrep</button>
+      <button onclick="document.getElementById('modModal').style.display='none'" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:.6rem 1.25rem;border-radius:8px;cursor:pointer">Prekliči</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let vsiUporabniki = [];
+let adminToken = null;
+
+/* init */
+function preveriAdmina() {
+  const token = localStorage.getItem('token');
+  const vloga = localStorage.getItem('vloga');
+  const username = localStorage.getItem('username');
+  adminToken = token;
+
+  if (!token || vloga !== 'admin') {
+    document.getElementById('adminZavrnjen').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('adminVsebina').style.display = 'block';
+  document.getElementById('userMenu').style.display = 'flex';
+  document.getElementById('userAvatar').textContent = (username||'A').substring(0,2).toUpperCase();
+
+  naloziVse();
+}
+
+async function naloziVse() {
+  await naloziAdminStats();
+  await naloziNepremicnine();
+  await naloziModeracije();
+  await naloziUporabnike();
+  await naloziForumObjave();
+  await naloziAdminFeedback();
+}
+
+/* statistika */
+async function naloziAdminStats() {
+  try {
+    const res  = await fetch(API + '/api/admin/stats', { headers: auth() });
+    if (!res.ok) return;
+    const d = await res.json();
+    document.getElementById('adminPendingApproval').textContent = d.pending   ?? '--';
+    document.getElementById('adminTotalUsers').textContent      = d.users     ?? '--';
+    document.getElementById('adminReportedContent').textContent = d.moderacije ?? '--';
+    document.getElementById('adminActiveListings').textContent     = d.nepremicnine     ?? '--';
+  } catch { /* tiho */ }
+}
+
+/* nepremičnine (poizvedbe še vedno ciljajo na tabelo "Turnir" — glej OPOMBO v server.js zakaj imena stolpcev niso bila preimenovana) */
+async function naloziNepremicnine() {
+  try {
+    const res  = await fetch(API + '/api/nepremicnine', { headers: auth() });
+    const data = await res.json();
+    if (!Array.isArray(data)) return;
+
+    // Zapolni select v modal
+    const sel = document.getElementById('modNepremicninaId');
+    sel.innerHTML = '<option value="">-- Izberi nepremičnino --</option>';
+    data.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.ID_Turnir || t.id;
+      opt.textContent = '#' + (t.ID_Turnir || t.id) + ' — ' + (t.Ime_turnirja || t.ime_turnirja || t.ime || 'Nepremičnina');
+      sel.appendChild(opt);
+    });
+
+    document.getElementById('adminNepremicnine').innerHTML = data.map(t => `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
+        <div>
+          <div style="font-weight:700">${t.Ime_turnirja || t.ime_turnirja || t.ime || 'Nepremičnina #'+(t.ID_Turnir||t.id)}</div>
+          <div style="font-size:.8rem;color:var(--text-secondary)">${t.Datum||t.datum ? new Date(t.Datum||t.datum).toLocaleDateString('sl-SI') : '--'} · ${t.Lokacija||t.lokacija||'--'} · ${t.Naslov_igre||t.igra||'--'}</div>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button onclick="potrdiNepremicnino(${t.ID_Turnir||t.id})" class="action-btn btn-green">✓ Potrdi</button>
+          <button onclick="blokirajNepremicnino(${t.ID_Turnir||t.id})" class="action-btn btn-orange">⏸ Blokiraj</button>
+          <button onclick="izbrisiNepremicnino(${t.ID_Turnir||t.id})" class="action-btn btn-red">✕ Izbriši</button>
+        </div>
+      </div>`).join('') || '<p style="color:var(--text-muted)">Ni nepremičnin.</p>';
+  } catch (err) { console.error(err); }
+}
+
+async function izbrisiNepremicnino(id) {
+  if (!confirm(`Res želiš izbrisati nepremičnino #${id}?`)) return;
+  try {
+    const res  = await fetch(API + '/api/nepremicnine/' + id, { method:'DELETE', headers: auth() });
+    const data = await res.json();
+    if (data.success) { showToast('Nepremičnina izbrisana.', 'ok'); naloziNepremicnine(); naloziAdminStats(); }
+    else showToast(data.error || 'Napaka.', 'err');
+  } catch { showToast('Napaka strežnika.', 'err'); }
+}
+
+async function potrdiNepremicnino(id) {
+  try {
+    const res = await fetch(API + '/api/admin/nepremicnine/' + id + '/potrdi', { method:'PUT', headers: auth() });
+    if (res.ok) { showToast('Nepremičnina potrjena! ✓', 'ok'); naloziNepremicnine(); }
+    else showToast('Napaka pri potrditvi.', 'err');
+  } catch { showToast('Napaka strežnika.', 'err'); }
+}
+
+async function blokirajNepremicnino(id) {
+  if (!confirm('Blokiraj nepremičnino #' + id + '?')) return;
+  try {
+    const res = await fetch(API + '/api/admin/nepremicnine/' + id + '/blokiraj', { method:'PUT', headers: auth() });
+    if (res.ok) { showToast('Nepremičnina blokirana.', 'ok'); naloziNepremicnine(); }
+    else showToast('Napaka.', 'err');
+  } catch { showToast('Napaka strežnika.', 'err'); }
+}
+
+/* moderacije */
+async function naloziModeracije() {
+  const tbody = document.getElementById('moderacijaBody');
+  try {
+    const res  = await fetch(API + '/api/moderacija', { headers: auth() });
+    if (!res.ok) throw new Error();
+    const lista = await res.json();
+
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="table-loading">Ni moderacijskih ukrepov.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(m => {
+      const bCls = m.Vrsta_ukrepa === 'brisanje' ? 'mod-brisanje' : m.Vrsta_ukrepa === 'blokiranje' ? 'mod-blokiranje' : m.Vrsta_ukrepa === 'potrditev' ? 'mod-potrditev' : 'mod-opozorilo';
+      return `<tr>
+        <td style="color:var(--text-muted);font-family:'DM Mono',monospace">#${m.ID_Moderacija}</td>
+        <td>Nepremičnina #${m.TK_Turnir}</td>
+        <td>${m.Datum ? new Date(m.Datum).toLocaleDateString('sl-SI') : '--'}</td>
+        <td style="max-width:200px;color:var(--text-secondary)">${m.Razlog || '--'}</td>
+        <td><span class="mod-badge ${bCls}">${m.Vrsta_ukrepa}</span></td>
+        <td><button class="action-btn btn-red" onclick="izbrisiModeracijo(${m.ID_Moderacija})">✕ Briši</button></td>
+      </tr>`;
+    }).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="6" class="table-loading">Napaka pri nalaganju.</td></tr>';
+  }
+}
+
+function odpriModModal() {
+  document.getElementById('modModal').style.display = 'flex';
+}
+
+function zapriModModal(e) {
+  if (e.target.id === 'modModal') document.getElementById('modModal').style.display = 'none';
+}
+
+async function shraniModeracijskiUkrep() {
+  const TK_Turnir    = document.getElementById('modNepremicninaId').value;
+  const Vrsta_ukrepa = document.getElementById('modVrsta').value;
+  const Razlog       = document.getElementById('modRazlog').value.trim();
+
+  if (!TK_Turnir) { showToast('Izberi nepremičnino!', 'warn'); return; }
+  if (!Razlog)    { showToast('Vnesi razlog!', 'warn'); return; }
+
+  try {
+    const res = await fetch(API + '/api/moderacija', {
+      method: 'POST',
+      headers: { ...auth(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ TK_Turnir, Vrsta_ukrepa, Razlog })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast('Ukrep shranjen! ✓', 'ok');
+      document.getElementById('modModal').style.display = 'none';
+      document.getElementById('modRazlog').value = '';
+      naloziModeracije();
+      naloziAdminStats();
+    } else { showToast(data.error || 'Napaka.', 'err'); }
+  } catch { showToast('Napaka strežnika.', 'err'); }
+}
+
+async function izbrisiModeracijo(id) {
+  if (!confirm('Izbriši moderacijski ukrep #' + id + '?')) return;
+  try {
+    const res = await fetch(API + '/api/moderacija/' + id, { method:'DELETE', headers: auth() });
+    if (res.ok) { showToast('Ukrep izbrisan.', 'ok'); naloziModeracije(); }
+    else showToast('Napaka.', 'err');
+  } catch { showToast('Napaka.', 'err'); }
+}
+
+/* uporabniki */
+async function naloziUporabnike() {
+  try {
+    const res = await fetch(API + '/api/admin/uporabniki', { headers: auth() });
+    if (!res.ok) throw new Error();
+    vsiUporabniki = await res.json();
+    renderUporabnike(vsiUporabniki);
+  } catch {
+    document.getElementById('uporabnikiBody').innerHTML =
+      '<tr><td colspan="6" class="table-loading">Napaka pri nalaganju.</td></tr>';
+  }
+}
+
+function renderUporabnike(lista) {
+  const tbody = document.getElementById('uporabnikiBody');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="table-loading">Ni uporabnikov.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(u => {
+    const blocked = u.blocked || u.Vloga === 'blokiran';
+    const vlCls   = u.Vloga === 'admin' || u.Vloga === 'Administrator' ? 'color:var(--accent-cyan)' : u.Vloga === 'blokiran' ? 'color:#ff4466' : 'color:var(--text-secondary)';
+    return `<tr class="${blocked ? 'user-row-blocked' : ''}">
+      <td style="color:var(--text-muted);font-family:'DM Mono',monospace">#${u.ID_Uporabniki}</td>
+      <td style="font-weight:700">${u.Username}</td>
+      <td style="color:var(--text-secondary)">${u.Email}</td>
+      <td><span style="${vlCls};font-size:.8rem;font-weight:700;text-transform:uppercase">${u.Vloga}</span></td>
+      <td>${blocked ? '<span style="color:#ff4466;font-size:.78rem;font-weight:700">BLOKIRAN</span>' : '<span style="color:#00ff7f;font-size:.78rem;font-weight:700">AKTIVEN</span>'}</td>
+      <td>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          ${!blocked
+            ? `<button class="action-btn btn-orange" onclick="blokirajUporabnika(${u.ID_Uporabniki})">⏸ Blokiraj</button>`
+            : `<button class="action-btn btn-green" onclick="odblokirajUporabnika(${u.ID_Uporabniki})">▶ Odblokir.</button>`
+          }
+          <button class="action-btn btn-red" onclick="izbrisiUporabnika(${u.ID_Uporabniki}, '${u.Username}')">✕ Briši</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filtrirajUporabnike(q) {
+  const fil = vsiUporabniki.filter(u =>
+    u.Username.toLowerCase().includes(q.toLowerCase()) ||
+    u.Email.toLowerCase().includes(q.toLowerCase())
+  );
+  renderUporabnike(fil);
+}
+
+async function blokirajUporabnika(id) {
+  if (!confirm('Blokiraj uporabnika #' + id + '?')) return;
+  try {
+    const res = await fetch(API + '/api/admin/uporabniki/' + id + '/blokiraj', { method:'PUT', headers: auth() });
+    if (res.ok) { showToast('Uporabnik blokiran.', 'ok'); naloziUporabnike(); naloziAdminStats(); }
+    else showToast('Napaka.', 'err');
+  } catch { showToast('Napaka.', 'err'); }
+}
+
+async function odblokirajUporabnika(id) {
+  try {
+    const res = await fetch(API + '/api/admin/uporabniki/' + id + '/odblokir', { method:'PUT', headers: auth() });
+    if (res.ok) { showToast('Uporabnik odblociran. ✓', 'ok'); naloziUporabnike(); }
+    else showToast('Napaka.', 'err');
+  } catch { showToast('Napaka.', 'err'); }
+}
+
+async function izbrisiUporabnika(id, name) {
+  if (!confirm(`Res izbriši uporabnika "${name}" (#${id})? To je trajno!`)) return;
+  try {
+    const res = await fetch(API + '/api/admin/uporabniki/' + id, { method:'DELETE', headers: auth() });
+    if (res.ok) { showToast('Uporabnik izbrisan.', 'ok'); naloziUporabnike(); naloziAdminStats(); }
+    else showToast('Napaka.', 'err');
+  } catch { showToast('Napaka.', 'err'); }
+}
+
+/* forum mod */
+async function naloziForumObjave() {
+  const el = document.getElementById('forumModList');
+  try {
+    const res = await fetch(API + '/api/forum', { headers: auth() });
+    if (!res.ok) throw new Error();
+    const lista = await res.json();
+    if (!lista.length) { el.innerHTML = '<div style="color:var(--text-muted);padding:1rem">Ni forum objav.</div>'; return; }
+    el.innerHTML = lista.map(f => `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:.6rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.Naslov || f.naslov || 'Brez naslova'}</div>
+          <div style="font-size:.78rem;color:var(--text-secondary);margin-top:.2rem">${f.Vsebina ? f.Vsebina.substring(0,100)+'...' : ''} · ${f.Datum_objave ? new Date(f.Datum_objave).toLocaleDateString('sl-SI') : ''}</div>
+        </div>
+        <div style="display:flex;gap:.4rem">
+          <button class="action-btn btn-red" onclick="izbrisiForumObjavo(${f.ID_Forum})">✕ Briši</button>
+          <button class="action-btn btn-orange" onclick="blokirajForumObjavo(${f.ID_Forum})">⏸ Blokiraj</button>
+        </div>
+      </div>`).join('');
+  } catch {
+    el.innerHTML = '<div style="color:var(--text-muted);padding:1rem">Napaka pri nalaganju forum objav.</div>';
+  }
+}
+
+async function izbrisiForumObjavo(id) {
+  if (!confirm('Izbriši forum objavo #' + id + '?')) return;
+  try {
+    const res = await fetch(API + '/api/forum/' + id, { method:'DELETE', headers: auth() });
+    if (res.ok) { showToast('Forum objava izbrisana.', 'ok'); naloziForumObjave(); }
+    else showToast('Napaka.', 'err');
+  } catch { showToast('Napaka.', 'err'); }
+}
+
+async function blokirajForumObjavo(id) {
+  try {
+    const res = await fetch(API + '/api/forum/' + id + '/blokiraj', { method:'PUT', headers: auth() });
+    if (res.ok) { showToast('Forum objava blokirana.', 'ok'); naloziForumObjave(); }
+    else showToast('Napaka.', 'err');
+  } catch { showToast('Napaka.', 'err'); }
+}
+
+/*f feedback admin  */
+async function naloziAdminFeedback() {
+  const tbody = document.getElementById('feedbackBody');
+  try {
+    const res = await fetch(API + '/api/admin/feedback', { headers: auth() });
+    if (!res.ok) throw new Error();
+    const lista = await res.json();
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="table-loading">Ni ocen.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(f => {
+      const stars = '★'.repeat(f.Ocena||f.ocena||0) + '☆'.repeat(5-(f.Ocena||f.ocena||0));
+      return `<tr>
+        <td style="color:var(--text-muted);font-family:'DM Mono',monospace">#${f.ID_Komentarji}</td>
+        <td>Forum #${f.ForumID_Forum}</td>
+        <td style="font-weight:600">${f.Ime_uporabnika || '--'}</td>
+        <td style="color:var(--accent-orange)">${stars}</td>
+        <td style="color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.Besedilo||''}</td>
+        <td><button class="action-btn btn-red" onclick="izbrisiOceno(${f.ID_Komentarji})">✕ Briši</button></td>
+      </tr>`;
+    }).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="6" class="table-loading">Napaka pri nalaganju.</td></tr>';
+  }
+}
+
+async function izbrisiOceno(id) {
+  if (!confirm('Izbriši oceno #' + id + '?')) return;
+  try {
+    const res = await fetch(API + '/api/admin/feedback/' + id, { method:'DELETE', headers: auth() });
+    if (res.ok) { showToast('Ocena izbrisana.', 'ok'); naloziAdminFeedback(); }
+    else showToast('Napaka.', 'err');
+  } catch { showToast('Napaka.', 'err'); }
+}
+
+/* zavihki */
+function switchAdminTab(tab, btn) {
+  ['nepremicnine','moderacija','uporabniki','forum','feedback'].forEach(t => {
+    document.getElementById('adminTab-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+/* pomozno */
+function auth() {
+  return { 'Authorization': 'Bearer ' + adminToken };
+}
+
+function odjava() {
+  ['token','vloga','username','userId'].forEach(k => localStorage.removeItem(k));
+  window.location.href = 'index.html';
+}
+
+function showToast(msg, tip='ok') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  const col = tip==='err' ? '#ff4466' : tip==='warn' ? '#ffc800' : 'var(--accent-green)';
+  t.style.borderLeft = '3px solid ' + col;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+preveriAdmina();
+</script>
+</body>
+</html>

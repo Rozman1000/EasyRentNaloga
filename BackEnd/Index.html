@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Easy Rent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div id="app">
+
+  <nav class="navbar">
+    <div class="nav-logo" onclick="window.location='index.html'">EASY<span>RENT</span></div>
+    <div class="nav-links">
+      <a class="nav-link active" href="index.html">Domov</a>
+      <a class="nav-link" href="lestvica.html">Lestvica</a>
+      <a class="nav-link" href="statistika.html">Statistika</a>
+      <a class="nav-link" href="nepremicnine.html">Nepremičnine</a>
+      <a class="nav-link" href="forum.html">Forum</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="profil.html">Profil</a>
+    </div>
+    <div class="nav-actions">
+      <div class="notif-btn" onclick="toggleNotif()" id="notifBtn">
+        🔔
+        <div class="notif-badge" id="notifBadge">0</div>
+      </div>
+      <div class="navbar-actions" id="authButtons">
+        <button class="btn btn-ghost" onclick="openModal('login')">Prijava</button>
+        <button class="btn btn-primary" onclick="openModal('register')">Registracija</button>
+      </div>
+      <div id="userMenu" style="display:none">
+        <div class="user-avatar" onclick="window.location='profil.html'" title="Profil" id="userAvatar">--</div>
+        <button class="btn btn-ghost" onclick="odjava()" style="margin-left:0.5rem">Odjava</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header">
+      <div class="notif-title">Obvestila</div>
+      <div class="notif-clear" onclick="clearNotif()">Označi vse kot prebrano</div>
+    </div>
+    <div id="notifItemsContainer"></div>
+  </div>
+
+  <!-- Skupen prijavno-registracijski modal, uporabljen na vseh podstranmi. -->
+  <div class="modal-overlay" id="authModal" onclick="closeModalOutside(event)" style="display:none">
+    <div class="modal">
+      <div class="modal-close" onclick="closeModal()">✕</div>
+      <div class="modal-header">
+        <div class="modal-title">Easy Rent</div>
+        <div class="modal-sub">Prijava v svoj račun</div>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('login')">Prijava</button>
+        <button class="modal-tab" onclick="switchTab('register')">Registracija</button>
+      </div>
+
+      <!-- Prijavni obrazec — id-ji loginUser/loginPass potrebni za login.js -->
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">E-pošta</label>
+          <input type="text" class="form-input" placeholder="Vnesi email..." id="loginUser">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" placeholder="Geslo..." id="loginPass">
+        </div>
+        <p id="loginNapaka" class="form-error"></p>
+        <button class="form-submit" onclick="doLogin()">PRIJAVA</button>
+      </div>
+
+      <!-- Registracijski obrazec — id-ji potrebni za registracija.js -->
+      <div id="registerForm" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Uporabniško ime</label>
+          <input type="text" class="form-input" placeholder="Kako naj te kličemo?" id="preveriGamerTag">
+          <p class="form-error-mt" id="napakaGamerTag"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-pošta</label>
+          <input type="email" class="form-input" placeholder="email@primer.com" id="preveriEPosta">
+          <p class="form-error-mt" id="napakaEPosta"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" placeholder="Min. 8 znakov..." id="preveriGeslo">
+          <p class="form-error-mt" id="napakaGesla"></p>
+        </div>
+        <button class="form-submit" onclick="doRegister()">USTVARI RAČUN </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Domača stran: hero, aktualne nepremičnine, povabilo v skupnost. -->
+  <div class="page active" id="homePage">
+    <div class="hero">
+      <div class="hero-badge">Novi oglasi vsak dan!</div>
+      <h1>
+        <span class="line1">Najdi svoj naslednji dom.</span>
+        <span class="line2">Preprosto in zanesljivo.</span>
+      </h1>
+      <p class="hero-sub">Easy Rent povezuje najemnike in lastnike nepremičnin na enem mestu — od iskanja in rezervacije do izmenjave izkušenj v skupnosti.</p>
+      <div class="hero-cta">
+        <button class="btn-hero btn-hero-primary" onclick="window.location='nepremicnine.html'">Poišči nepremičnino</button>
+        <button class="btn-hero btn-hero-secondary" onclick="openModal('register')">Ustvari profil</button>
+      </div>
+    
+    </div>
+
+    <div class="section-header">
+      <div class="section-title"><span>Trenutno</span> na voljo</div>
+      <div class="section-link" onclick="window.location='nepremicnine.html'">Vse nepremičnine →</div>
+    </div>
+    <div class="cards-grid" id="liveTournaments"></div>
+
+    <div class="section-header">
+      <div class="section-title">Kmalu <span>prosto</span></div>
+      <div class="section-link" onclick="window.location='nepremicnine.html'">Prikaži vse →</div>
+    </div>
+    <div class="cards-grid" id="upcomingTournaments"></div>
+
+    <!-- Povabilo v skupnost namesto podvajanja forumskih objav (te že živijo na forum.html) -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;margin-top:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+      <div>
+        <div class="section-title" style="margin-bottom:0.4rem">Pridruži se skupnosti</div>
+        <p style="color:var(--text-secondary);font-size:0.9rem">Vprašaj za nasvet, deli izkušnje ali poišči sostanovalca na našem forumu.</p>
+      </div>
+      <button class="btn-primary" onclick="window.location='forum.html'">Obišči forum →</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-logo">EASYRENT</div>
+    <p>2026 Easy Rent - Preprosto oddajanje in najemanje nepremičnin - Slovenija</p>
+  </div>
+</div>
+
+<script src="login.js"></script>
+<script src="registracija.js"></script>
+
+<script>
+  /* Modal funkcije  */
+  function openModal(tab) {
+    document.getElementById('authModal').style.display = 'flex';
+    switchTab(tab);
+  }
+
+  function closeModal() {
+    document.getElementById('authModal').style.display = 'none';
+  }
+
+  function closeModalOutside(e) {
+    if (e.target.id === 'authModal') closeModal();
+  }
+
+  function switchTab(t) {
+    document.getElementById('loginForm').style.display    = t === 'login'    ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = t === 'register' ? 'block' : 'none';
+    document.querySelectorAll('.modal-tab').forEach((b, i) =>
+      b.classList.toggle('active', (i === 0 && t === 'login') || (i === 1 && t === 'register'))
+    );
+  }
+
+  /* ── Ob nalaganju strani preveri ali je uporabnik prijavljen ───── */
+  function preveriPrijavo() {
+    const token    = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+
+    if (token && username) {
+      document.getElementById('authButtons').style.display = 'none';
+      document.getElementById('userMenu').style.display    = 'flex';
+      document.getElementById('userAvatar').textContent    = username.substring(0, 2).toUpperCase();
+    }
+  }
+
+  /* ── Odjava  */
+  function odjava() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('vloga');
+    localStorage.removeItem('username');
+    document.getElementById('authButtons').style.display = 'flex';
+    document.getElementById('userMenu').style.display    = 'none';
+  }
+
+  function showToast(msg) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<div>${msg}</div>`;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  /* ── Nepremičnine za domačo stran (prosta + kmalu prosta) ───────── */
+  async function naloziDomacoStran() {
+    try {
+      const res  = await fetch('/api/nepremicnine');
+      const data = await res.json();
+      if (!Array.isArray(data)) return;
+
+      const proste = data.filter(p => (p.Status || '').toLowerCase() === 'live').slice(0, 3);
+      const kmalu  = data.filter(p => (p.Status || '').toLowerCase() === 'upcoming').slice(0, 3);
+
+      document.getElementById('liveTournaments').innerHTML     = renderCards(proste)  || prazniOpis('Trenutno ni prostih nepremičnin.');
+      document.getElementById('upcomingTournaments').innerHTML = renderCards(kmalu)   || prazniOpis('Trenutno ni napovedanih objav.');
+    } catch (err) {
+      console.error('Napaka pri nalaganju nepremičnin za domačo stran:', err);
+    }
+  }
+
+  function renderCards(list) {
+    return list.map(p => `
+      <div class="tournament-card" onclick="window.location='nepremicnine.html'">
+        <div class="t-card-header">
+          <div class="t-status ${(p.Status||'upcoming').toLowerCase()}">${p.Status || 'Kmalu prosto'}</div>
+          <div class="t-name">${p.Ime_turnirja}</div>
+          <span class="t-game" style="background:var(--bg-elevated);color:var(--accent-cyan)">${p.Naslov_igre || 'Nepremičnina'}</span>
+        </div>
+        <div class="t-meta">
+          <div class="t-meta-row"><span class="t-meta-key">Lokacija</span><span class="t-meta-value">${p.Lokacija}</span></div>
+        </div>
+        <div class="t-footer">
+          <div><div class="t-prize-label">Cena na noč</div><div class="t-prize">${p.Nagradni_sklad} €</div></div>
+        </div>
+      </div>`).join('');
+  }
+
+  function prazniOpis(besedilo) {
+    return `<div class="empty-state" style="grid-column:1/-1"><div class="empty-text">${besedilo}</div></div>`;
+  }
+
+  /* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+  let obvestilaCache = [];
+
+  async function loadNotifications() {
+    const token = localStorage.getItem('token');
+    if (!token) { updateNotifBadge(); return; }
+    try {
+      const res = await fetch('/api/obvestila', { headers: { Authorization: 'Bearer ' + token } });
+      obvestilaCache = res.ok ? await res.json() : [];
+    } catch {
+      obvestilaCache = [];
+    }
+    updateNotifBadge();
+  }
+
+  function updateNotifBadge() {
+    const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano).length;
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.textContent = unread;
+  }
+
+  function toggleNotif() {
+    const panel = document.getElementById('notifPanel');
+    const isOpen = panel.style.display === 'block';
+    panel.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+      const container = document.getElementById('notifItemsContainer');
+      if (!container) return;
+      if (!localStorage.getItem('token')) {
+        container.innerHTML = `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Prijavi se, da vidiš obvestila.</div>`;
+        return;
+      }
+      container.innerHTML = obvestilaCache.length === 0
+        ? `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Ni novih obvestil</div>`
+        : obvestilaCache.slice(0, 10).map(o => `
+            <div class="notif-item">
+              <div class="notif-msg">${o.Vsebina || o.vsebina || ''}</div>
+            </div>`).join('');
+    }
+  }
+
+  function clearNotif() {
+    // TODO: po želji tukaj pokliči PUT /api/obvestila/:id/preberi za vsako neprebrano obvestilo.
+    document.getElementById('notifPanel').style.display = 'none';
+  }
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('notifPanel');
+    const btn   = document.getElementById('notifBtn');
+    if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+      panel.style.display = 'none';
+    }
+  });
+
+  // Zaženi ob nalaganju
+  preveriPrijavo();
+  loadNotifications();
+  naloziDomacoStran();
+</script>
+
+</body>
+</html>

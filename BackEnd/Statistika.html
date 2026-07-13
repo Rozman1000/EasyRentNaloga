@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statistika – Easy Rent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div id="app">
+
+  <!-- Navigacija -->
+  <nav class="navbar">
+    <div class="nav-logo" onclick="window.location='index.html'">EASY<span>RENT</span></div>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Domov</a>
+      <a class="nav-link" href="lestvica.html">Lestvica</a>
+      <a class="nav-link active" href="statistika.html">Statistika</a>
+      <a class="nav-link" href="nepremicnine.html">Nepremičnine</a>
+      <a class="nav-link" href="forum.html">Forum</a>
+      <a class="nav-link" href="admin.html">Admin</a>
+      <a class="nav-link" href="profil.html">Profil</a>
+    </div>
+    <div class="nav-actions">
+      <div class="notif-btn" onclick="toggleNotif()" id="notifBtn">
+        🔔
+        <div class="notif-badge" id="notifBadge">0</div>
+      </div>
+      <div id="authButtons">
+        <button class="btn btn-ghost" onclick="openModal('login')">Prijava</button>
+        <button class="btn btn-primary" onclick="openModal('register')">Registracija</button>
+      </div>
+      <div id="userMenu" style="display:none">
+        <div class="user-avatar" title="Profil" id="userAvatar">--</div>
+        <button class="btn btn-ghost" onclick="odjava()" style="margin-left:0.5rem">Odjava</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Obvestilni panel -->
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header">
+      <div class="notif-title">Obvestila</div>
+      <div class="notif-clear" onclick="clearNotif()">Označi vse kot prebrano</div>
+    </div>
+    <div id="notifItemsContainer"></div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="authModal" onclick="closeModalOutside(event)" style="display:none">
+    <div class="modal">
+      <div class="modal-close" onclick="closeModal()">✕</div>
+      <div class="modal-header">
+        <div class="modal-title">Easy Rent</div>
+        <div class="modal-sub">Prijava v svoj račun</div>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab active" onclick="switchTab('login')">Prijava</button>
+        <button class="modal-tab" onclick="switchTab('register')">Registracija</button>
+      </div>
+      <div id="loginForm">
+        <div class="form-group">
+          <label class="form-label">E-pošta</label>
+          <input type="text" class="form-input" placeholder="Vnesi email..." id="loginUser">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" placeholder="••••••••" id="loginPass">
+        </div>
+        <p id="loginNapaka" class="form-error"></p>
+        <button class="form-submit" onclick="doLogin()">PRIJAVA</button>
+      </div>
+      <div id="registerForm" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Uporabniško ime</label>
+          <input type="text" class="form-input" placeholder="Kako naj te kličemo?" id="preveriGamerTag">
+          <p class="form-error-mt" id="napakaGamerTag"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-pošta</label>
+          <input type="email" class="form-input" placeholder="email@primer.com" id="preveriEPosta">
+          <p class="form-error-mt" id="napakaEPosta"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geslo</label>
+          <input type="password" class="form-input" placeholder="Min. 8 znakov..." id="preveriGeslo">
+          <p class="form-error-mt" id="napakaGesla"></p>
+        </div>
+        <button class="form-submit" onclick="doRegister()">USTVARI RAČUN</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Glavna vsebina -->
+  <div class="page active" id="statistikaPage">
+
+    <div style="margin-bottom:1.5rem">
+      <h1 class="section-title" style="font-size:2rem;margin-bottom:0.5rem">Statistika</h1>
+      <p style="color:var(--text-secondary);font-size:0.9rem">Katere nepremičnine so najbolj priljubljene in najbolj uspešne pri najemnikih</p>
+    </div>
+
+    <!-- Hitri pregled -->
+    <div class="stats-strip" style="margin-bottom:2rem">
+      <div class="stat-item" style="border-radius:0">
+        <div class="stat-num" id="statTotalProperties">--</div>
+        <div class="stat-label">Nepremičnin skupaj</div>
+      </div>
+      <div class="stat-item" style="border-radius:0">
+        <div class="stat-num" id="statTotalGuests">--</div>
+        <div class="stat-label">Gostov trenutno nastanjenih</div>
+      </div>
+      <div class="stat-item" style="border-radius:0">
+        <div class="stat-num" id="statTopCity">--</div>
+        <div class="stat-label">Najbolj iskana lokacija</div>
+      </div>
+    </div>
+
+    <!-- Lestvica: najbolj priljubljene nepremičnine -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.5rem">
+      <div class="section-title" style="margin-bottom:1rem">Najbolj rentane nepremičnine</div>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1rem">Razvrščeno po trenutnem številu nastanjenih gostov glede na kapaciteto.</p>
+      <div id="topRentedList"></div>
+    </div>
+
+    <!-- Lestvica po lokacijah -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.5rem">
+      <div class="section-title" style="margin-bottom:1rem">Najbolj iskane lokacije</div>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1rem">Število razpoložljivih nepremičnin po kraju.</p>
+      <div id="topLocationsList"></div>
+    </div>
+
+  </div><!-- /.page -->
+
+  <div class="footer">
+    <div class="footer-logo">EASYRENT</div>
+    <p>© 2026 Easy Rent · Preprosto oddajanje in najemanje nepremičnin · Slovenija</p>
+  </div>
+
+</div><!-- /#app -->
+
+<!-- ── Skripte ── -->
+<script src="login.js"></script>
+<script src="registracija.js"></script>
+<script src="statistika.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  preveriPrijavo();
+  loadNotifications();
+  naloziStatistiko();
+});
+
+async function naloziStatistiko() {
+  try {
+    const res = await fetch('/api/nepremicnine');
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error('Neveljaven odgovor strežnika.');
+
+    prikaziPregled(data);
+
+    const ranked = StatsEngine.computeRanking(data);
+    StatsEngine.renderRankingList('topRentedList', ranked);
+
+    renderTopLocations(data);
+  } catch (err) {
+    console.error('Napaka pri nalaganju statistike:', err);
+    document.getElementById('topRentedList').innerHTML =
+      '<div class="empty-state"><div class="empty-text">Napaka pri nalaganju statistike.</div></div>';
+  }
+}
+
+function prikaziPregled(data) {
+  const skupaj = data.length;
+  const gostje = data.reduce((acc, p) => acc + (parseInt(p.Prijavljene_ekipe) || 0), 0);
+
+  // Preštej lokacije in poišči najpogostejšo
+  const lokacijeCount = {};
+  data.forEach(p => {
+    const l = p.Lokacija || 'Neznano';
+    lokacijeCount[l] = (lokacijeCount[l] || 0) + 1;
+  });
+  const topLokacija = Object.entries(lokacijeCount).sort((a, b) => b[1] - a[1])[0];
+
+  document.getElementById('statTotalProperties').textContent = skupaj;
+  document.getElementById('statTotalGuests').textContent     = gostje;
+  document.getElementById('statTopCity').textContent         = topLokacija ? topLokacija[0] : '--';
+}
+
+function renderTopLocations(data) {
+  const el = document.getElementById('topLocationsList');
+  const lokacijeCount = {};
+  data.forEach(p => {
+    const l = p.Lokacija || 'Neznano';
+    lokacijeCount[l] = (lokacijeCount[l] || 0) + 1;
+  });
+
+  const sorted = Object.entries(lokacijeCount).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const max = sorted.length ? sorted[0][1] : 1;
+
+  if (!sorted.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-text">Ni podatkov o lokacijah.</div></div>';
+    return;
+  }
+
+  el.innerHTML = sorted.map(([lokacija, count]) => `
+    <div style="margin-bottom:0.85rem">
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.3rem">
+        <span style="font-weight:600">${lokacija}</span>
+        <span style="color:var(--text-secondary)">${count} nepremičnin</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round((count / max) * 100)}%"></div></div>
+    </div>
+  `).join('');
+}
+
+/* ── modal / auth funkcije (skupno vsem podstranem) ── */
+function openModal(tab) {
+  document.getElementById('authModal').style.display = 'flex';
+  switchTab(tab);
+}
+function closeModal() { document.getElementById('authModal').style.display = 'none'; }
+function closeModalOutside(e) { if (e.target.id === 'authModal') closeModal(); }
+function switchTab(t) {
+  document.getElementById('loginForm').style.display    = t === 'login'    ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = t === 'register' ? 'block' : 'none';
+  document.querySelectorAll('.modal-tab').forEach((b, i) =>
+    b.classList.toggle('active', (i === 0 && t === 'login') || (i === 1 && t === 'register'))
+  );
+}
+
+function preveriPrijavo() {
+  const token    = localStorage.getItem('token');
+  const username = localStorage.getItem('username');
+  if (token && username) {
+    document.getElementById('authButtons').style.display = 'none';
+    document.getElementById('userMenu').style.display    = 'flex';
+    document.getElementById('userAvatar').textContent    = username.substring(0, 2).toUpperCase();
+  }
+}
+
+function odjava() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('vloga');
+  localStorage.removeItem('username');
+  document.getElementById('authButtons').style.display = 'flex';
+  document.getElementById('userMenu').style.display    = 'none';
+}
+
+function showToast(msg) {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<div>${msg}</div>`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+/* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+let obvestilaCache = [];
+
+async function loadNotifications() {
+  const token = localStorage.getItem('token');
+  if (!token) { updateNotifBadge(); return; }
+  try {
+    const res = await fetch('/api/obvestila', { headers: { Authorization: 'Bearer ' + token } });
+    obvestilaCache = res.ok ? await res.json() : [];
+  } catch {
+    obvestilaCache = [];
+  }
+  updateNotifBadge();
+}
+
+function updateNotifBadge() {
+  const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano).length;
+  const badge = document.getElementById('notifBadge');
+  if (badge) badge.textContent = unread;
+}
+
+function toggleNotif() {
+  const panel = document.getElementById('notifPanel');
+  const isOpen = panel.style.display === 'block';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const container = document.getElementById('notifItemsContainer');
+    if (!container) return;
+    if (!localStorage.getItem('token')) {
+      container.innerHTML = `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Prijavi se, da vidiš obvestila.</div>`;
+      return;
+    }
+    container.innerHTML = obvestilaCache.length === 0
+      ? `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Ni novih obvestil</div>`
+      : obvestilaCache.slice(0, 10).map(o => `
+          <div class="notif-item">
+            <div class="notif-msg">${o.Vsebina || o.vsebina || ''}</div>
+          </div>`).join('');
+  }
+}
+function clearNotif() {
+  // TODO: Naredi PUT /api/obvestila/:id/preberi za vsako neprebrano obvestilo.
+  document.getElementById('notifPanel').style.display = 'none';
+}
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('notifPanel');
+  const btn   = document.getElementById('notifBtn');
+  if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.style.display = 'none';
+  }
+});
+</script>
+
+</body>
+</html>
