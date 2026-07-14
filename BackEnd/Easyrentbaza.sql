@@ -1,141 +1,138 @@
-
 -- brisanje tabel
-DROP TABLE IF EXISTS "Feedback" CASCADE;
-DROP TABLE IF EXISTS "Prijava" CASCADE;
+DROP TABLE IF EXISTS "Ocena" CASCADE;
+DROP TABLE IF EXISTS "Rezervacija" CASCADE;
 DROP TABLE IF EXISTS "Forum" CASCADE;
 DROP TABLE IF EXISTS "Obvestila" CASCADE;
-DROP TABLE IF EXISTS "Nagrada" CASCADE;
-DROP TABLE IF EXISTS "Turnir" CASCADE;
+DROP TABLE IF EXISTS "Popust" CASCADE;
+DROP TABLE IF EXISTS "Nepremicnine" CASCADE;
 DROP TABLE IF EXISTS "Moderacija" CASCADE;
-DROP TABLE IF EXISTS "Igra" CASCADE;
-DROP TABLE IF EXISTS "Bracket" CASCADE;
-DROP TABLE IF EXISTS "Gost" CASCADE;
+DROP TABLE IF EXISTS "Tip_nepremicnine" CASCADE;
+DROP TABLE IF EXISTS "Pogoji_najema" CASCADE;
+DROP TABLE IF EXISTS "Uporabnik" CASCADE;
 
 
 -- ustvarjanje tabel
 
--- Katalog tipov nepremičnin (prej: katalog video-iger)
-CREATE TABLE "Igra" (
-                        "ID_Igra"      SERIAL PRIMARY KEY,
-                        "Naslov_igre"  VARCHAR(255) NOT NULL, -- npr. "Hiša", "Apartma", "Vila", "Kabina"
-                        "Žanr"         VARCHAR(255) NOT NULL, -- npr. kategorija: "Družinska", "Luksuzna", "Mestna"
-                        "Platforma"    VARCHAR(255) NOT NULL  -- npr. dodatna oznaka: "Samostojna hiša", "Večstanovanjska"
+-- Katalog tipov nepremičnin
+CREATE TABLE "Tip_nepremicnine" (
+                        "ID_Tip_nepremicnine" SERIAL PRIMARY KEY,
+                        "Naziv"        VARCHAR(255) NOT NULL, -- npr. "Hiša", "Apartma", "Vila", "Kabina"
+                        "Zanr"         VARCHAR(255) NOT NULL, -- npr. kategorija: "Družinska", "Luksuzna", "Mestna"
+                        "Podtip"       VARCHAR(255) NOT NULL  -- npr. dodatna oznaka: "Samostojna hiša", "Večstanovanjska"
 );
 
--- "Paket pogojev najema", vezan na nepremičnino (prej: format turnirskega bracketa)
-CREATE TABLE "Bracket" (
-                           "ID_Bracket"  SERIAL PRIMARY KEY,
+-- Paket pogojev najema, vezan na nepremičnino
+CREATE TABLE "Pogoji_najema" (
+                           "ID_Pogoji_najema" SERIAL PRIMARY KEY,
                            "Tip_sistema" VARCHAR(255) NOT NULL, -- npr. "Kratkoročni najem", "Dolgoročni najem"
-                           "Št_krogov"   INTEGER      NOT NULL, -- npr. minimalno število noči
-                           "Pravila"     VARCHAR(255) NOT NULL  -- npr. hišni red / pogoji bivanja
+                           "Min_nocitev" INTEGER      NOT NULL, -- minimalno število noči
+                           "Pravila"     VARCHAR(255) NOT NULL  -- hišni red / pogoji bivanja
 );
 
 -- Uporabniki platforme (najemniki, lastniki, administratorji)
-CREATE TABLE "Gost" (
-                        "ID_Uporabniki" SERIAL PRIMARY KEY,
+CREATE TABLE "Uporabnik" (
+                        "ID_Uporabnik" SERIAL PRIMARY KEY,
                         "Username"      VARCHAR(255) NOT NULL,
                         "Email"         VARCHAR(255) NOT NULL,
                         "Geslo"         VARCHAR(255) NOT NULL,
                         "Vloga"         VARCHAR(255) NOT NULL, -- 'najemnik' | 'lastnik' | 'administrator' | 'blokiran'
-                        "Drzava"        VARCHAR(255)           -- NOVO: prej shranjeno v odstranjeni tabeli "Igralci"
+                        "Drzava"        VARCHAR(255)
 );
 
 CREATE TABLE "Moderacija" (
-                              "ID_Moderacija" SERIAL PRIMARY KEY,
-                              "TK_Turnir"     INTEGER      NOT NULL, -- nepremičnina/vsebina, na katero se ukrep nanaša
-                              "Datum"         DATE         NOT NULL,
-                              "Razlog"        VARCHAR(255) NOT NULL,
-                              "Vrsta_ukrepa"  VARCHAR(255) NOT NULL
+                              "ID_Moderacija"     SERIAL PRIMARY KEY,
+                              "TK_Nepremicnina"   INTEGER      NOT NULL, -- nepremičnina/vsebina, na katero se ukrep nanaša
+                              "Datum"             DATE         NOT NULL,
+                              "Razlog"            VARCHAR(255) NOT NULL,
+                              "Vrsta_ukrepa"      VARCHAR(255) NOT NULL
 );
 
--- Nepremičnine za najem (prej: turnirji)
-CREATE TABLE "Turnir" (
-                          "ID_Turnir"     SERIAL PRIMARY KEY,
-                          "TK_Uporabniki" INTEGER      NOT NULL, -- lastnik, ki je nepremičnino objavil
-                          "TK_Igra"       INTEGER      NOT NULL, -- tip nepremičnine (glej tabelo "Igra")
-                          "TK_Forum"      INTEGER,
-                          "TK_Bracket"    INTEGER      NOT NULL, -- paket pogojev najema
-                          "Ime_turnirja"  VARCHAR(255) NOT NULL, -- naziv nepremičnine
-                          "Opis"          VARCHAR(255),
-                          "Datum"         DATE         NOT NULL, -- na voljo od
-                          "Lokacija"      VARCHAR(255) NOT NULL,
-                          "Status"        VARCHAR(255) NOT NULL, -- 'live' (prosto) | 'upcoming' (kmalu prosto) | 'completed' (zasedeno) | 'blokiran'
-                          "Lat"           VARCHAR(255) NOT NULL, -- zemljepisna širina (za Google Maps)
-                          "Lng"           VARCHAR(255) NOT NULL, -- zemljepisna dolžina (za Google Maps)
-                          "Max_ekip"      INTEGER      NOT NULL, -- kapaciteta (največje število gostov)
-                          "Prijavljene_ekipe" INTEGER  NOT NULL, -- trenutno nastanjenih/rezerviranih gostov
-                          "Nagradni_sklad"    VARCHAR(255) NOT NULL -- cena najema na noč (€)
+-- Nepremičnine za najem
+CREATE TABLE "Nepremicnine" (
+                          "ID_Nepremicnina"        SERIAL PRIMARY KEY,
+                          "TK_Uporabnik"           INTEGER      NOT NULL, -- lastnik, ki je nepremičnino objavil
+                          "TK_Tip_nepremicnine"    INTEGER      NOT NULL, -- tip nepremičnine
+                          "TK_Forum"               INTEGER,
+                          "TK_Pogoji_najema"       INTEGER      NOT NULL, -- paket pogojev najema
+                          "Ime_nepremicnine"       VARCHAR(255) NOT NULL, -- naziv nepremičnine
+                          "Opis"                   VARCHAR(255),
+                          "Datum"                  DATE         NOT NULL, -- na voljo od
+                          "Lokacija"               VARCHAR(255) NOT NULL,
+                          "Status"                 VARCHAR(255) NOT NULL, -- 'live' (prosto) | 'upcoming' (kmalu prosto) | 'completed' (zasedeno) | 'blokiran'
+                          "Lat"                    VARCHAR(255) NOT NULL, -- zemljepisna širina (za Google Maps)
+                          "Lng"                    VARCHAR(255) NOT NULL, -- zemljepisna dolžina (za Google Maps)
+                          "Max_gostov"             INTEGER      NOT NULL, -- kapaciteta (največje število gostov)
+                          "Trenutno_gostov"        INTEGER      NOT NULL, -- trenutno nastanjenih/rezerviranih gostov
+                          "Cena_na_noc"            VARCHAR(255) NOT NULL -- cena najema na noč (€)
 );
 
--- Promocijski popusti/nagrade za posamezno nepremičnino (prej: turnirske nagrade)
-CREATE TABLE "Nagrada" (
-                           "ID_Nagrada"           SERIAL PRIMARY KEY,
-                           "TK_Turnir"            INTEGER      NOT NULL,
-                           "Vrsta_nagrade"        VARCHAR(255) NOT NULL,
+-- Promocijski popusti za posamezno nepremičnino
+CREATE TABLE "Popust" (
+                           "ID_Popust"            SERIAL PRIMARY KEY,
+                           "TK_Nepremicnina"      INTEGER      NOT NULL,
+                           "Vrsta_popusta"        VARCHAR(255) NOT NULL,
                            "Vrednost"             INTEGER      NOT NULL,
-                           "Uvrstitev_za_nagrado" SMALLINT     NOT NULL
+                           "Prioriteta"           SMALLINT     NOT NULL
 );
 
 CREATE TABLE "Obvestila" (
-                             "ID_Obvestila"  SERIAL PRIMARY KEY,
-                             "TK_Turnir"     INTEGER      NOT NULL,
-                             "Vsebina"       VARCHAR(255) NOT NULL,
-                             "Tip_obvestila" INTEGER      NOT NULL,
-                             "TK_Gost"       INTEGER      NOT NULL
+                             "ID_Obvestilo"     SERIAL PRIMARY KEY,
+                             "TK_Nepremicnina"  INTEGER      NOT NULL,
+                             "Vsebina"          VARCHAR(255) NOT NULL,
+                             "Tip_obvestila"    INTEGER      NOT NULL,
+                             "TK_Uporabnik"     INTEGER      NOT NULL
 );
 
 CREATE TABLE "Forum" (
-                         "ID_Forum"                SERIAL PRIMARY KEY,
-                         "Naslov"                  VARCHAR(255) NOT NULL,
-                         "Vsebina"                 VARCHAR(255) NOT NULL,
-                         "Datum_objave"            DATE         NOT NULL,
-                         "ModeracijaID_Moderacija" INTEGER      NOT NULL,
-                         "UporabnikiID_Uporabniki" INTEGER
+                         "ID_Forum"          SERIAL PRIMARY KEY,
+                         "Naslov"            VARCHAR(255) NOT NULL,
+                         "Vsebina"           VARCHAR(255) NOT NULL,
+                         "Datum_objave"      DATE         NOT NULL,
+                         "TK_Moderacija"     INTEGER      NOT NULL,
+                         "TK_Uporabnik"      INTEGER
 );
 
--- Rezervacije (prej: prijava EKIPE na turnir — zdaj rezervira POSAMEZNIK)
-CREATE TABLE "Prijava" (
-                           "ID_Prijava"         SERIAL PRIMARY KEY,
-                           "Datum_prijave"      DATE         NOT NULL, -- datum rezervacije
-                           "TK_Turnir"          INTEGER      NOT NULL, -- rezervirana nepremičnina
-                           "TK_Gost"            INTEGER      NOT NULL  -- uporabnik, ki je rezerviral (prej: TK_Ekipe)
-                           -- OPOMBA: stolpec "TK_Turnir2" (podvojen tuji ključ na Turnir, verjetno
-                           -- napaka v prejšnji shemi) je bil odstranjen.
+-- Rezervacije nepremičnin s strani posameznega uporabnika
+CREATE TABLE "Rezervacija" (
+                           "ID_Rezervacija"     SERIAL PRIMARY KEY,
+                           "Datum_rezervacije"  DATE         NOT NULL,
+                           "TK_Nepremicnina"    INTEGER      NOT NULL, -- rezervirana nepremičnina
+                           "TK_Uporabnik"       INTEGER      NOT NULL  -- uporabnik, ki je rezerviral
 );
 
--- Ocene nastanitev (prej: ocene turnirjev/igralcev)
-CREATE TABLE "Feedback" (
-                            "ID_Komentarji"  SERIAL PRIMARY KEY,
-                            "TK_Forum"       INTEGER,
-                            "Besedilo"       VARCHAR(255) NOT NULL,
-                            "Ime_uporabnika" VARCHAR(255) NOT NULL,
-                            "TK_Uporabniki"  INTEGER,
-                            "Ocena"          SMALLINT     NOT NULL CHECK ("Ocena" BETWEEN 1 AND 5),
-                            "TK_Igralci"     INTEGER      NOT NULL, -- kaže na "Prijava"("ID_Prijava") — glej opombo zgoraj
-                            "ForumID_Forum"  INTEGER      NOT NULL
+-- Ocene nastanitev
+CREATE TABLE "Ocena" (
+                            "ID_Ocena"        SERIAL PRIMARY KEY,
+                            "TK_Forum"        INTEGER,
+                            "Besedilo"        VARCHAR(255) NOT NULL,
+                            "Ime_uporabnika"  VARCHAR(255) NOT NULL,
+                            "TK_Uporabnik"    INTEGER,
+                            "Ocena"           SMALLINT     NOT NULL CHECK ("Ocena" BETWEEN 1 AND 5),
+                            "TK_Rezervacija"  INTEGER      NOT NULL, -- kaže na "Rezervacija"("ID_Rezervacija")
+                            "TK_Forum2"       INTEGER      NOT NULL
 );
 
 
 -- tuji ključi
-ALTER TABLE "Turnir"      ADD CONSTRAINT fk_turnir_gost          FOREIGN KEY ("TK_Uporabniki")           REFERENCES "Gost"("ID_Uporabniki");
-ALTER TABLE "Turnir"      ADD CONSTRAINT fk_turnir_igra          FOREIGN KEY ("TK_Igra")                 REFERENCES "Igra"("ID_Igra");
-ALTER TABLE "Turnir"      ADD CONSTRAINT fk_turnir_bracket       FOREIGN KEY ("TK_Bracket")              REFERENCES "Bracket"("ID_Bracket");
-ALTER TABLE "Turnir"      ADD CONSTRAINT fk_turnir_forum         FOREIGN KEY ("TK_Forum")                REFERENCES "Forum"("ID_Forum");
-ALTER TABLE "Nagrada"     ADD CONSTRAINT fk_nagrada_turnir       FOREIGN KEY ("TK_Turnir")               REFERENCES "Turnir"("ID_Turnir");
-ALTER TABLE "Obvestila"   ADD CONSTRAINT fk_obvestila_turnir     FOREIGN KEY ("TK_Turnir")               REFERENCES "Turnir"("ID_Turnir");
-ALTER TABLE "Obvestila"   ADD CONSTRAINT fk_obvestila_gost       FOREIGN KEY ("TK_Gost")                 REFERENCES "Gost"("ID_Uporabniki");
-ALTER TABLE "Forum"       ADD CONSTRAINT fk_forum_moderacija     FOREIGN KEY ("ModeracijaID_Moderacija") REFERENCES "Moderacija"("ID_Moderacija");
-ALTER TABLE "Moderacija"  ADD CONSTRAINT fk_moderacija_turnir    FOREIGN KEY ("TK_Turnir")               REFERENCES "Turnir"("ID_Turnir");
-ALTER TABLE "Prijava"     ADD CONSTRAINT fk_prijava_turnir       FOREIGN KEY ("TK_Turnir")               REFERENCES "Turnir"("ID_Turnir");
-ALTER TABLE "Prijava"     ADD CONSTRAINT fk_prijava_gost         FOREIGN KEY ("TK_Gost")                 REFERENCES "Gost"("ID_Uporabniki");
-ALTER TABLE "Feedback"    ADD CONSTRAINT fk_feedback_prijava     FOREIGN KEY ("TK_Igralci")              REFERENCES "Prijava"("ID_Prijava");
-ALTER TABLE "Feedback"    ADD CONSTRAINT fk_feedback_forum       FOREIGN KEY ("ForumID_Forum")           REFERENCES "Forum"("ID_Forum");
+ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_uporabnik      FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik");
+ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_tip            FOREIGN KEY ("TK_Tip_nepremicnine") REFERENCES "Tip_nepremicnine"("ID_Tip_nepremicnine");
+ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_pogoji_najema  FOREIGN KEY ("TK_Pogoji_najema")    REFERENCES "Pogoji_najema"("ID_Pogoji_najema");
+ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_forum         FOREIGN KEY ("TK_Forum")            REFERENCES "Forum"("ID_Forum");
+ALTER TABLE "Popust"       ADD CONSTRAINT fk_popust_nepremicnina        FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina");
+ALTER TABLE "Obvestila"    ADD CONSTRAINT fk_obvestilo_nepremicnina     FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina");
+ALTER TABLE "Obvestila"    ADD CONSTRAINT fk_obvestilo_uporabnik        FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik");
+ALTER TABLE "Forum"        ADD CONSTRAINT fk_forum_moderacija           FOREIGN KEY ("TK_Moderacija")       REFERENCES "Moderacija"("ID_Moderacija");
+ALTER TABLE "Moderacija"   ADD CONSTRAINT fk_moderacija_nepremicnina    FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina");
+ALTER TABLE "Rezervacija"  ADD CONSTRAINT fk_rezervacija_nepremicnina   FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina");
+ALTER TABLE "Rezervacija"  ADD CONSTRAINT fk_rezervacija_uporabnik      FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik");
+ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_rezervacija          FOREIGN KEY ("TK_Rezervacija")      REFERENCES "Rezervacija"("ID_Rezervacija");
+ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_forum                FOREIGN KEY ("TK_Forum2")           REFERENCES "Forum"("ID_Forum");
 
 
 -- 1. Osnovne tabele
 
--- Tipi nepremičnin (prej: video-igre)
-INSERT INTO "Igra" ("Naslov_igre", "Žanr", "Platforma") VALUES
+-- Tipi nepremičnin
+INSERT INTO "Tip_nepremicnine" ("Naziv", "Zanr", "Podtip") VALUES
 ('Hiša',    'Družinska', 'Samostojna hiša'),
 ('Apartma', 'Mestna',    'Večstanovanjska stavba'),
 ('Vila',    'Luksuzna',  'Samostojna hiša'),
@@ -143,8 +140,8 @@ INSERT INTO "Igra" ("Naslov_igre", "Žanr", "Platforma") VALUES
 ('Apartma', 'Študentska','Večstanovanjska stavba'),
 ('Hiša',    'Kmečka',    'Samostojna hiša');
 
--- Paketi pogojev najema (prej: bracket formati)
-INSERT INTO "Bracket" ("Tip_sistema", "Št_krogov", "Pravila") VALUES
+-- Paketi pogojev najema
+INSERT INTO "Pogoji_najema" ("Tip_sistema", "Min_nocitev", "Pravila") VALUES
 ('Kratkoročni najem', 1,  'Minimalno 1 noč, brez hišnih ljubljenčkov'),
 ('Dolgoročni najem',  30, 'Minimalno 30 dni, dovoljeni hišni ljubljenčki'),
 ('Kratkoročni najem', 2,  'Minimalno 2 noči, kajenje prepovedano'),
@@ -153,7 +150,7 @@ INSERT INTO "Bracket" ("Tip_sistema", "Št_krogov", "Pravila") VALUES
 ('Dolgoročni najem',  90, 'Minimalno 90 dni, primerno za družine'),
 ('Kratkoročni najem', 5,  'Minimalno 5 noči, primerno za skupine do 10 oseb');
 
-INSERT INTO "Gost" ("Username", "Email", "Geslo", "Vloga", "Drzava") VALUES
+INSERT INTO "Uporabnik" ("Username", "Email", "Geslo", "Vloga", "Drzava") VALUES
 ('Admin_Marko', 'marko@easyrent.si', '$2b$10$IIHhqe9tKP58pnLVKBZGIudpI7n3gEEF1FnZCRy8FCRmU2gvdo.7G', 'Administrator', 'Slovenija'), --test: geslo123
 ('Luka_King', 'luka@gmail.com', '$2b$10$J2Kk1GdLn84aeg.3Wn6d..yUHMykaXWiLK3N6b3VObk/dajb2RYKC', 'najemnik', 'Slovenija'),--test: luka123
 ('Ana_Pro', 'ana.pro@yahoo.com', '$2b$10$2qbfzBsd1SC7BM65UaXG/.qukYggO3OLt/BAZVuyxwwvdxpm5//fW', 'najemnik', 'Hrvaška'),--test: anabanana
@@ -161,7 +158,7 @@ INSERT INTO "Gost" ("Username", "Email", "Geslo", "Vloga", "Drzava") VALUES
 ('Ghost_Player', 'ghost@gmail.com', '$2b$10$02N.hFJA58HCyutbEsoQOOtzgKAB7d2RlxObqrykswBKryT4Cgxj2', 'najemnik', 'Italija');--test: hidden123
 
 -- 2. Nepremičnine
-INSERT INTO "Turnir" ("TK_Uporabniki", "TK_Igra", "TK_Bracket", "Ime_turnirja", "Opis", "Datum", "Lokacija","Status","Lat","Lng","Max_ekip","Prijavljene_ekipe","Nagradni_sklad") VALUES
+INSERT INTO "Nepremicnine" ("TK_Uporabnik", "TK_Tip_nepremicnine", "TK_Pogoji_najema", "Ime_nepremicnine", "Opis", "Datum", "Lokacija","Status","Lat","Lng","Max_gostov","Trenutno_gostov","Cena_na_noc") VALUES
 (1, 2, 1,
  'Sončno stanovanje v centru Ljubljane',
  'Svetlo dvosobno stanovanje v samem centru mesta, primerno za pare ali poslovne goste. V bližini vse potrebne storitve.',
@@ -211,22 +208,22 @@ INSERT INTO "Turnir" ("TK_Uporabniki", "TK_Igra", "TK_Bracket", "Ime_turnirja", 
  'completed', 46.5547, 15.6466,
  6, 6, '180');
 
--- 3. Nagrade/popusti, Obvestila in Moderacija
-INSERT INTO "Nagrada" ("TK_Turnir", "Vrsta_nagrade", "Vrednost", "Uvrstitev_za_nagrado") VALUES
+-- 3. Popusti, Obvestila in Moderacija
+INSERT INTO "Popust" ("TK_Nepremicnina", "Vrsta_popusta", "Vrednost", "Prioriteta") VALUES
 (1, 'Popust za zgodnjo rezervacijo', 10, 1),
 (1, 'Popust za daljše bivanje', 15, 2),
 (2, 'Brezplačen zajtrk', 0, 1),
 (4, 'Darilni bon', 20, 3),
 (5, 'Popust za stalne goste', 5, 1);
 
-INSERT INTO "Obvestila" ("TK_Turnir", "Vsebina", "Tip_obvestila", "TK_Gost") VALUES
+INSERT INTO "Obvestila" ("TK_Nepremicnina", "Vsebina", "Tip_obvestila", "TK_Uporabnik") VALUES
 (1, 'Rezervacije so odprte!', 1, 1),
 (2, 'Cena najema je bila posodobljena.', 2, 4),
 (1, 'Vaša rezervacija se potrdi v 15 minutah.', 3, 2),
 (4, 'Rezervacija preklicana s strani najemnika.', 4, 1),
 (5, 'Nepremičnina začasno ni na voljo.', 2, 5);
 
-INSERT INTO "Moderacija" ("TK_Turnir", "Datum", "Razlog", "Vrsta_ukrepa") VALUES
+INSERT INTO "Moderacija" ("TK_Nepremicnina", "Datum", "Razlog", "Vrsta_ukrepa") VALUES
 (1, '2024-06-01', 'Neprimerno vedenje v komentarjih', 'Warning'),
 (2, '2024-07-01', 'Lažna objava nepremičnine', 'Ban'),
 (4, '2024-09-01', 'Neustrezen naziv objave', 'Force change'),
@@ -234,15 +231,15 @@ INSERT INTO "Moderacija" ("TK_Turnir", "Datum", "Razlog", "Vrsta_ukrepa") VALUES
 (2, '2024-07-05', 'Deljenje računa med več uporabniki', 'Permanent Ban');
 
 -- 4. Forum
-INSERT INTO "Forum" ("Naslov", "Vsebina", "Datum_objave", "ModeracijaID_Moderacija", "UporabnikiID_Uporabniki") VALUES
+INSERT INTO "Forum" ("Naslov", "Vsebina", "Datum_objave", "TK_Moderacija", "TK_Uporabnik") VALUES
 ('Pravila skupnosti', 'Prosimo, preberite pravila pred objavo.', '2024-05-20', 1, 1),
 ('Iščem sostanovalca', 'Iščem mirnega sostanovalca za deljeno stanovanje.', '2024-05-21', 4, 2),
 ('Težave s spletno stranjo', 'Stran se občasno ne odziva.', '2024-06-16', 3, 3),
 ('Uspešna izkušnja', 'Čestitke ekipi Easy Rent za odlično platformo!', '2024-06-17', 1, 5),
 ('Pritožba glede rezervacije', 'Napačen datum na potrditvi rezervacije.', '2024-07-21', 2, 4);
 
--- 5. Rezervacije (prej: prijava ekip na turnirje — zdaj rezervacije posameznikov)
-INSERT INTO "Prijava" ("Datum_prijave", "TK_Turnir", "TK_Gost") VALUES
+-- 5. Rezervacije
+INSERT INTO "Rezervacija" ("Datum_rezervacije", "TK_Nepremicnina", "TK_Uporabnik") VALUES
 ('2024-05-01', 1, 2),
 ('2024-05-02', 1, 3),
 ('2024-06-01', 2, 3),
@@ -252,14 +249,14 @@ INSERT INTO "Prijava" ("Datum_prijave", "TK_Turnir", "TK_Gost") VALUES
 ('2024-04-05', 8, 5);
 
 -- za vsako nepremičnino dodamo forum (dodatno delo zaradi krožnih povezav)
-UPDATE "Turnir" SET "TK_Forum" = 1 WHERE "ID_Turnir" = 1;
-UPDATE "Turnir" SET "TK_Forum" = 2 WHERE "ID_Turnir" = 2;
-UPDATE "Turnir" SET "TK_Forum" = 3 WHERE "ID_Turnir" = 3;
-UPDATE "Turnir" SET "TK_Forum" = 4 WHERE "ID_Turnir" = 4;
-UPDATE "Turnir" SET "TK_Forum" = 5 WHERE "ID_Turnir" = 5;
+UPDATE "Nepremicnine" SET "TK_Forum" = 1 WHERE "ID_Nepremicnina" = 1;
+UPDATE "Nepremicnine" SET "TK_Forum" = 2 WHERE "ID_Nepremicnina" = 2;
+UPDATE "Nepremicnine" SET "TK_Forum" = 3 WHERE "ID_Nepremicnina" = 3;
+UPDATE "Nepremicnine" SET "TK_Forum" = 4 WHERE "ID_Nepremicnina" = 4;
+UPDATE "Nepremicnine" SET "TK_Forum" = 5 WHERE "ID_Nepremicnina" = 5;
 
--- 6. Ocene nastanitev (TK_Igralci zdaj kaže na Prijava.ID_Prijava — glej opombo na vrhu)
-INSERT INTO "Feedback" ("TK_Forum", "Besedilo", "Ime_uporabnika", "TK_Uporabniki", "Ocena", "TK_Igralci", "ForumID_Forum") VALUES
+-- 6. Ocene nastanitev (TK_Rezervacija kaže na Rezervacija.ID_Rezervacija)
+INSERT INTO "Ocena" ("TK_Forum", "Besedilo", "Ime_uporabnika", "TK_Uporabnik", "Ocena", "TK_Rezervacija", "TK_Forum2") VALUES
 (1, 'Odlična nastanitev, priporočam!', 'Luka_King', 2, 5, 1, 1),
 (3, 'Zamude pri komunikaciji z lastnikom.', 'Ana_Pro', 3, 3, 3, 3),
 (4, 'Zelo ugodna cena za tako lepo hišo.', 'Ghost_Player', 5, 4, 5, 4),
