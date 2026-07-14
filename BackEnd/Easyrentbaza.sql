@@ -108,8 +108,7 @@ CREATE TABLE "Ocena" (
                             "Ime_uporabnika"  VARCHAR(255) NOT NULL,
                             "TK_Uporabnik"    INTEGER,
                             "Ocena"           SMALLINT     NOT NULL CHECK ("Ocena" BETWEEN 1 AND 5),
-                            "TK_Rezervacija"  INTEGER      NOT NULL, -- kaže na "Rezervacija"("ID_Rezervacija")
-                            "TK_Forum2"       INTEGER      NOT NULL
+                            "TK_Rezervacija"  INTEGER      NOT NULL -- kaže na "Rezervacija"("ID_Rezervacija")
 );
 
 
@@ -126,7 +125,7 @@ ALTER TABLE "Moderacija"   ADD CONSTRAINT fk_moderacija_nepremicnina    FOREIGN 
 ALTER TABLE "Rezervacija"  ADD CONSTRAINT fk_rezervacija_nepremicnina   FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina");
 ALTER TABLE "Rezervacija"  ADD CONSTRAINT fk_rezervacija_uporabnik      FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik");
 ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_rezervacija          FOREIGN KEY ("TK_Rezervacija")      REFERENCES "Rezervacija"("ID_Rezervacija");
-ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_forum                FOREIGN KEY ("TK_Forum2")           REFERENCES "Forum"("ID_Forum");
+ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_forum                FOREIGN KEY ("TK_Forum")            REFERENCES "Forum"("ID_Forum");
 
 
 -- 1. Osnovne tabele
@@ -256,12 +255,43 @@ UPDATE "Nepremicnine" SET "TK_Forum" = 4 WHERE "ID_Nepremicnina" = 4;
 UPDATE "Nepremicnine" SET "TK_Forum" = 5 WHERE "ID_Nepremicnina" = 5;
 
 -- 6. Ocene nastanitev (TK_Rezervacija kaže na Rezervacija.ID_Rezervacija)
-INSERT INTO "Ocena" ("TK_Forum", "Besedilo", "Ime_uporabnika", "TK_Uporabnik", "Ocena", "TK_Rezervacija", "TK_Forum2") VALUES
-(1, 'Odlična nastanitev, priporočam!', 'Luka_King', 2, 5, 1, 1),
-(3, 'Zamude pri komunikaciji z lastnikom.', 'Ana_Pro', 3, 3, 3, 3),
-(4, 'Zelo ugodna cena za tako lepo hišo.', 'Ghost_Player', 5, 4, 5, 4),
-(5, 'Lastnik ni bil odziven.', 'Luka_King', 2, 2, 6, 5),
-(2, 'Vrhunska izkušnja, vrnili se bomo.', 'Ghost_Player', 5, 5, 7, 2);
+INSERT INTO "Ocena" ("TK_Forum", "Besedilo", "Ime_uporabnika", "TK_Uporabnik", "Ocena", "TK_Rezervacija") VALUES
+(1, 'Odlična nastanitev, priporočam!', 'Luka_King', 2, 5, 1),
+(3, 'Zamude pri komunikaciji z lastnikom.', 'Ana_Pro', 3, 3, 3),
+(4, 'Zelo ugodna cena za tako lepo hišo.', 'Ghost_Player', 5, 4, 5),
+(5, 'Lastnik ni bil odziven.', 'Luka_King', 2, 2, 6),
+(2, 'Vrhunska izkušnja, vrnili se bomo.', 'Ghost_Player', 5, 5, 7);
 
 
 --Dodaj še povpraševanja!
+
+-- 1. Katere nepremičnine so najbolj rentane (glede na trenutno zasedenost
+--    kapacitete) — enaka logika kot uporablja GET /api/statistika/top
+SELECT
+    n."Ime_nepremicnine",
+    n."Lokacija",
+    n."Trenutno_gostov"    AS Trenutno_gostov,
+    n."Max_gostov"         AS Kapaciteta,
+    ROUND(100.0 * n."Trenutno_gostov" / NULLIF(n."Max_gostov", 0), 1) AS Zasedenost_pct
+FROM "Nepremicnine" n
+ORDER BY Zasedenost_pct DESC;
+
+-- 2. Kateri najemniki imajo največ rezervacij
+SELECT
+    u."Username"                AS Najemnik,
+    COUNT(r."ID_Rezervacija")   AS Stevilo_rezervacij
+FROM "Uporabnik" u
+JOIN "Rezervacija" r ON u."ID_Uporabnik" = r."TK_Uporabnik"
+GROUP BY u."ID_Uporabnik", u."Username"
+ORDER BY Stevilo_rezervacij DESC;
+
+-- 3. Povprečna ocena po nepremičnini
+SELECT
+    n."Ime_nepremicnine",
+    ROUND(AVG(o."Ocena"), 2) AS Povprecna_ocena,
+    COUNT(o."ID_Ocena")      AS Stevilo_ocen
+FROM "Nepremicnine" n
+JOIN "Rezervacija" r ON r."TK_Nepremicnina" = n."ID_Nepremicnina"
+JOIN "Ocena" o        ON o."TK_Rezervacija" = r."ID_Rezervacija"
+GROUP BY n."ID_Nepremicnina", n."Ime_nepremicnine"
+ORDER BY Povprecna_ocena DESC;
