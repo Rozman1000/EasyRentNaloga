@@ -30,10 +30,28 @@
       <a class="nav-link" href="profil.html">Profil</a>
     </div>
     <div class="nav-actions">
-      <button class="btn-ghost" onclick="openModal('login')" style="margin-right:0.5rem">Prijava</button>
-      <button class="btn-primary" onclick="openModal('register')">Registracija</button>
+      <div class="notif-btn" onclick="toggleNotif()" id="notifBtn">
+        🔔
+        <div class="notif-badge" id="notifBadge">0</div>
+      </div>
+      <div id="authButtons" style="display:flex;gap:0.5rem">
+        <button class="btn-ghost" onclick="openModal('login')" style="margin-right:0.5rem">Prijava</button>
+        <button class="btn-primary" onclick="openModal('register')">Registracija</button>
+      </div>
+      <div id="userMenu" style="display:none;align-items:center;gap:0.5rem">
+        <div class="user-avatar" id="userAvatar" title="Profil">--</div>
+        <button class="btn-ghost" onclick="odjava()">Odjava</button>
+      </div>
     </div>
   </nav>
+
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header">
+      <div class="notif-title">Obvestila</div>
+      <div class="notif-clear" onclick="clearNotif()">Označi vse kot prebrano</div>
+    </div>
+    <div id="notifItemsContainer"></div>
+  </div>
 
   <!-- Modalni dialog za avtentikacijo (skupen vsem podstranem). -->
   <div class="modal-overlay" id="authModal" onclick="closeModalOutside(event)">
@@ -104,10 +122,10 @@
 
     <!-- Kratka predstavitev — statične oznake, brez potrebe po osveževanju iz baze. -->
     <div class="feature-strip" style="margin-bottom:2rem">
-      <div class="feature-chip">🏠 <span>Hiše, apartmaji, vile in kabine</span></div>
-      <div class="feature-chip">📅 <span>Kratkoročni in dolgoročni najem</span></div>
-      <div class="feature-chip">🔎 <span>Filtriraj po tipu in statusu</span></div>
-      <div class="feature-chip">📍 <span>Lokacija na zemljevidu za prijavljene</span></div>
+      <div class="feature-chip"><span>Hiše, apartmaji, vile in kabine</span></div>
+      <div class="feature-chip"><span>Kratkoročni in dolgoročni najem</span></div>
+      <div class="feature-chip"><span>Filtriraj po tipu in statusu</span></div>
+      <div class="feature-chip"><span>Lokacija na zemljevidu za prijavljene</span></div>
     </div>
 
     <!-- Filtri po tipu nepremičnine in statusu. applyPropertyFilters() združi vse aktivne filtre. -->
@@ -170,14 +188,6 @@
 <script src="registracija.js"></script>
 
 <script>
-/*
- * nepremicnine.html — seznam nepremičnin za najem.
- *
- * OPOMBA ZA PREGLED: prej je ta stran prikazovala turnirje (ekipe, igre,
- * nagradni sklad). Zdaj prikazuje nepremičnine za najem: ime, tip, lokacijo,
- * ceno na noč in trenutno zasedenost. Klik na kartico odpre podrobnosti in
- * (če si prijavljen) pokaže lokacijo na Google Maps.
- */
 
 let properties = [];
 let activeTypeFilter = 'all';
@@ -323,14 +333,41 @@ function preveriDostopDoZemljevida() {
     document.getElementById('mapWrap').style.display         = prijavljen ? 'block' : 'none';
 }
 
-function rezervirajNepremicnino(id) {
+// rezervacija — POPRAVEK: prej je gumb samo prikazal toast, brez
+// dejanskega klica na strežnik, zato rezervacija ni bila nikoli shranjena.
+async function rezervirajNepremicnino(id) {
     const p = properties.find(x => x.ID_Turnir === id);
-    if (!localStorage.getItem('token')) {
+    if (!p) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
         showToast('Za rezervacijo se moraš najprej prijaviti.');
         openModal('login');
         return;
     }
-    showToast(`Rezervacija za "${p.Ime_turnirja}" je bila poslana!`);
+
+    try {
+        const res = await fetch('/api/nepremicnine/rezervacija', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ tk_nepremicnina: id, stevilo_gostov: 1 })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            showToast(data.message || `Rezervacija za "${p.Ime_turnirja}" je bila uspešno oddana!`);
+            document.getElementById('propertyModal').style.display = 'none';
+            fetchPropertiesFromDB(); // osveži seznam, da se posodobi zasedenost
+        } else {
+            showToast(data.error || 'Rezervacija ni uspela.');
+        }
+    } catch (err) {
+        console.error('Napaka pri rezervaciji:', err);
+        showToast('Napaka pri povezavi s strežnikom.');
+    }
 }
 
 function showToast(msg) {
@@ -362,11 +399,81 @@ function odjava() {
     localStorage.removeItem('vloga');
     localStorage.removeItem('username');
     preveriDostopDoZemljevida();
+    preveriPrijavo();
 }
+
+function preveriPrijavo() {
+    const username = localStorage.getItem('username');
+    const ab = document.getElementById('authButtons');
+    const um = document.getElementById('userMenu');
+    const av = document.getElementById('userAvatar');
+    if (!username) {
+        if (ab) ab.style.display = 'flex';
+        if (um) um.style.display = 'none';
+        return;
+    }
+    if (ab) ab.style.display = 'none';
+    if (um) um.style.display = 'flex';
+    if (av) av.textContent   = username.substring(0,2).toUpperCase();
+}
+
+/* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+let obvestilaCache = [];
+
+async function loadNotifications() {
+    const token = localStorage.getItem('token');
+    if (!token) { updateNotifBadge(); return; }
+    try {
+        const res = await fetch('/api/obvestila', { headers: { Authorization: 'Bearer ' + token } });
+        obvestilaCache = res.ok ? await res.json() : [];
+    } catch {
+        obvestilaCache = [];
+    }
+    updateNotifBadge();
+}
+
+function updateNotifBadge() {
+    const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano).length;
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.textContent = unread;
+}
+
+function toggleNotif() {
+    const panel = document.getElementById('notifPanel');
+    const isOpen = panel.style.display === 'block';
+    panel.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+        const container = document.getElementById('notifItemsContainer');
+        if (!container) return;
+        if (!localStorage.getItem('token')) {
+            container.innerHTML = `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Prijavi se, da vidiš obvestila.</div>`;
+            return;
+        }
+        container.innerHTML = obvestilaCache.length === 0
+            ? `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Ni novih obvestil</div>`
+            : obvestilaCache.slice(0, 10).map(o => `
+                <div class="notif-item">
+                    <div class="notif-msg">${o.Vsebina || o.vsebina || ''}</div>
+                </div>`).join('');
+    }
+}
+
+function clearNotif() {
+    document.getElementById('notifPanel').style.display = 'none';
+}
+document.addEventListener('click', (e) => {
+    const panel = document.getElementById('notifPanel');
+    const btn   = document.getElementById('notifBtn');
+    if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+        panel.style.display = 'none';
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchPropertiesFromDB();
     preveriDostopDoZemljevida();
+    preveriPrijavo();
+    loadNotifications();
 });
 </script>
 

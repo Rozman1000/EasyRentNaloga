@@ -1,0 +1,60 @@
+version: '3.8'
+ 
+services:
+  web-server:
+    build:
+      context: .
+      # POPRAVEK: dockerfile pot mora točno ustrezati imenu mape na disku.
+      # Če je mapa "js-backend" (mala b), mora biti js-backend/Dockerfile.
+      # Če je mapa "js-Backend" (velika B), mora biti js-Backend/Dockerfile.
+      # Na Linuxu (Docker) je velikost črk pomembna!
+      dockerfile: js-Backend/Dockerfile
+    container_name: web-server-js
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_HOST=db-database
+      - DB_USER=postgres
+      - DB_PASSWORD=testnosuperskrpno
+      - DB_NAME=testna_baza
+      # POPRAVEK: dodan JWT_SECRET - brez tega server.js uporablja privzeto vrednost
+      # kar ni varno. V produkciji zamenjaj z dolgim naključnim nizom.
+      - JWT_SECRET=zamenjaj-z-dolgim-nakljucnim-nizom-v-produkciji
+      # Geocoding za turnirji.html — vstavi svoj Google Maps API ključ
+      - GOOGLE_API_KEY=tukaj_vstavi_svoj_api_kljuc
+    depends_on:
+      db-database:
+        condition: service_healthy
+    networks:
+      - turnir-network
+ 
+  db-database:
+    image: postgres:15-alpine
+    container_name: db-database
+    hostname: db-database
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=testnosuperskrpno
+      - POSTGRES_DB=testna_baza
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # pot do SQL datoteke mora točno ustrezati imenu mape in datoteke.
+      # Ime datoteke "TurninrBaza.sql" je ohranjen (ne popravljamo, ker je datoteka taka).
+      - ./js-Backend/TurninrBaza.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d testna_baza"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    networks:
+      - turnir-network
+ 
+volumes:
+  pgdata:
+ 
+networks:
+  turnir-network:
+    driver: bridge

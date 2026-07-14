@@ -1,4 +1,6 @@
+
 -- brisanje tabel
+DROP TABLE IF EXISTS "Glas_Forum" CASCADE;
 DROP TABLE IF EXISTS "Ocena" CASCADE;
 DROP TABLE IF EXISTS "Rezervacija" CASCADE;
 DROP TABLE IF EXISTS "Forum" CASCADE;
@@ -75,21 +77,36 @@ CREATE TABLE "Popust" (
                            "Prioriteta"           SMALLINT     NOT NULL
 );
 
+-- Obvestila uporabnikov
 CREATE TABLE "Obvestila" (
                              "ID_Obvestilo"     SERIAL PRIMARY KEY,
                              "TK_Nepremicnina"  INTEGER      NOT NULL,
                              "Vsebina"          VARCHAR(255) NOT NULL,
                              "Tip_obvestila"    INTEGER      NOT NULL,
-                             "TK_Uporabnik"     INTEGER      NOT NULL
+                             "TK_Uporabnik"     INTEGER      NOT NULL,
+                             "Prebrano"         BOOLEAN      NOT NULL DEFAULT FALSE,
+                             "Datum"            TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Forum skupnosti
 CREATE TABLE "Forum" (
                          "ID_Forum"          SERIAL PRIMARY KEY,
                          "Naslov"            VARCHAR(255) NOT NULL,
-                         "Vsebina"           VARCHAR(255) NOT NULL,
+                         "Vsebina"           TEXT         NOT NULL,
                          "Datum_objave"      DATE         NOT NULL,
-                         "TK_Moderacija"     INTEGER      NOT NULL,
+                         "Kategorija"        VARCHAR(50)  NOT NULL DEFAULT 'splosno',
+                         "Pripeto"           BOOLEAN      NOT NULL DEFAULT FALSE,
+                         "TK_Moderacija"     INTEGER,
                          "TK_Uporabnik"      INTEGER
+);
+
+-- Glasovi (+1 / -1) uporabnikov na forumskih objavah.
+CREATE TABLE "Glas_Forum" (
+                         "ID_Glas"           SERIAL PRIMARY KEY,
+                         "TK_Forum"          INTEGER      NOT NULL,
+                         "TK_Uporabnik"      INTEGER      NOT NULL,
+                         "Vrednost"          SMALLINT     NOT NULL CHECK ("Vrednost" IN (1, -1)),
+                         UNIQUE ("TK_Forum", "TK_Uporabnik")
 );
 
 -- Rezervacije nepremičnin s strani posameznega uporabnika
@@ -113,19 +130,23 @@ CREATE TABLE "Ocena" (
 
 
 -- tuji ključi
-ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_uporabnik      FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik");
+ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_uporabnik      FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik") ON DELETE CASCADE;
 ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_tip            FOREIGN KEY ("TK_Tip_nepremicnine") REFERENCES "Tip_nepremicnine"("ID_Tip_nepremicnine");
 ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_pogoji_najema  FOREIGN KEY ("TK_Pogoji_najema")    REFERENCES "Pogoji_najema"("ID_Pogoji_najema");
-ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_forum         FOREIGN KEY ("TK_Forum")            REFERENCES "Forum"("ID_Forum");
-ALTER TABLE "Popust"       ADD CONSTRAINT fk_popust_nepremicnina        FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina");
-ALTER TABLE "Obvestila"    ADD CONSTRAINT fk_obvestilo_nepremicnina     FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina");
-ALTER TABLE "Obvestila"    ADD CONSTRAINT fk_obvestilo_uporabnik        FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik");
-ALTER TABLE "Forum"        ADD CONSTRAINT fk_forum_moderacija           FOREIGN KEY ("TK_Moderacija")       REFERENCES "Moderacija"("ID_Moderacija");
-ALTER TABLE "Moderacija"   ADD CONSTRAINT fk_moderacija_nepremicnina    FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina");
-ALTER TABLE "Rezervacija"  ADD CONSTRAINT fk_rezervacija_nepremicnina   FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina");
-ALTER TABLE "Rezervacija"  ADD CONSTRAINT fk_rezervacija_uporabnik      FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik");
-ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_rezervacija          FOREIGN KEY ("TK_Rezervacija")      REFERENCES "Rezervacija"("ID_Rezervacija");
-ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_forum                FOREIGN KEY ("TK_Forum")            REFERENCES "Forum"("ID_Forum");
+ALTER TABLE "Nepremicnine" ADD CONSTRAINT fk_nepremicnina_forum         FOREIGN KEY ("TK_Forum")            REFERENCES "Forum"("ID_Forum") ON DELETE SET NULL;
+ALTER TABLE "Popust"       ADD CONSTRAINT fk_popust_nepremicnina        FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina") ON DELETE CASCADE;
+ALTER TABLE "Obvestila"    ADD CONSTRAINT fk_obvestilo_nepremicnina     FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina") ON DELETE CASCADE;
+ALTER TABLE "Obvestila"    ADD CONSTRAINT fk_obvestilo_uporabnik        FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik") ON DELETE CASCADE;
+ALTER TABLE "Forum"        ADD CONSTRAINT fk_forum_moderacija           FOREIGN KEY ("TK_Moderacija")       REFERENCES "Moderacija"("ID_Moderacija") ON DELETE SET NULL;
+ALTER TABLE "Forum"        ADD CONSTRAINT fk_forum_uporabnik            FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik") ON DELETE SET NULL;
+ALTER TABLE "Glas_Forum"   ADD CONSTRAINT fk_glas_forum                 FOREIGN KEY ("TK_Forum")            REFERENCES "Forum"("ID_Forum") ON DELETE CASCADE;
+ALTER TABLE "Glas_Forum"   ADD CONSTRAINT fk_glas_uporabnik             FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik") ON DELETE CASCADE;
+ALTER TABLE "Moderacija"   ADD CONSTRAINT fk_moderacija_nepremicnina    FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina") ON DELETE CASCADE;
+ALTER TABLE "Rezervacija"  ADD CONSTRAINT fk_rezervacija_nepremicnina   FOREIGN KEY ("TK_Nepremicnina")     REFERENCES "Nepremicnine"("ID_Nepremicnina") ON DELETE CASCADE;
+ALTER TABLE "Rezervacija"  ADD CONSTRAINT fk_rezervacija_uporabnik      FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik") ON DELETE CASCADE;
+ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_rezervacija          FOREIGN KEY ("TK_Rezervacija")      REFERENCES "Rezervacija"("ID_Rezervacija") ON DELETE CASCADE;
+ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_forum                FOREIGN KEY ("TK_Forum")            REFERENCES "Forum"("ID_Forum") ON DELETE SET NULL;
+ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_uporabnik            FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik") ON DELETE SET NULL;
 
 
 -- 1. Osnovne tabele
@@ -215,12 +236,12 @@ INSERT INTO "Popust" ("TK_Nepremicnina", "Vrsta_popusta", "Vrednost", "Prioritet
 (4, 'Darilni bon', 20, 3),
 (5, 'Popust za stalne goste', 5, 1);
 
-INSERT INTO "Obvestila" ("TK_Nepremicnina", "Vsebina", "Tip_obvestila", "TK_Uporabnik") VALUES
-(1, 'Rezervacije so odprte!', 1, 1),
-(2, 'Cena najema je bila posodobljena.', 2, 4),
-(1, 'Vaša rezervacija se potrdi v 15 minutah.', 3, 2),
-(4, 'Rezervacija preklicana s strani najemnika.', 4, 1),
-(5, 'Nepremičnina začasno ni na voljo.', 2, 5);
+INSERT INTO "Obvestila" ("TK_Nepremicnina", "Vsebina", "Tip_obvestila", "TK_Uporabnik", "Prebrano", "Datum") VALUES
+(1, 'Rezervacije so odprte!', 1, 1, FALSE, CURRENT_TIMESTAMP - INTERVAL '6 hours'),
+(2, 'Cena najema je bila posodobljena.', 2, 4, TRUE,  CURRENT_TIMESTAMP - INTERVAL '2 days'),
+(1, 'Vaša rezervacija se potrdi v 15 minutah.', 3, 2, FALSE, CURRENT_TIMESTAMP - INTERVAL '1 hour'),
+(4, 'Rezervacija preklicana s strani najemnika.', 4, 1, FALSE, CURRENT_TIMESTAMP - INTERVAL '3 days'),
+(5, 'Nepremičnina začasno ni na voljo.', 2, 5, TRUE,  CURRENT_TIMESTAMP - INTERVAL '5 days');
 
 INSERT INTO "Moderacija" ("TK_Nepremicnina", "Datum", "Razlog", "Vrsta_ukrepa") VALUES
 (1, '2024-06-01', 'Neprimerno vedenje v komentarjih', 'Warning'),
@@ -229,13 +250,23 @@ INSERT INTO "Moderacija" ("TK_Nepremicnina", "Datum", "Razlog", "Vrsta_ukrepa") 
 (1, '2024-06-10', 'Spamanje v komentarjih', 'Mute'),
 (2, '2024-07-05', 'Deljenje računa med več uporabniki', 'Permanent Ban');
 
--- 4. Forum
-INSERT INTO "Forum" ("Naslov", "Vsebina", "Datum_objave", "TK_Moderacija", "TK_Uporabnik") VALUES
-('Pravila skupnosti', 'Prosimo, preberite pravila pred objavo.', '2024-05-20', 1, 1),
-('Iščem sostanovalca', 'Iščem mirnega sostanovalca za deljeno stanovanje.', '2024-05-21', 4, 2),
-('Težave s spletno stranjo', 'Stran se občasno ne odziva.', '2024-06-16', 3, 3),
-('Uspešna izkušnja', 'Čestitke ekipi Easy Rent za odlično platformo!', '2024-06-17', 1, 5),
-('Pritožba glede rezervacije', 'Napačen datum na potrditvi rezervacije.', '2024-07-21', 2, 4);
+-- 4. Forum (POPRAVEK: dodana "Kategorija" in "Pripeto" za dinamično filtriranje)
+INSERT INTO "Forum" ("Naslov", "Vsebina", "Datum_objave", "Kategorija", "Pripeto", "TK_Moderacija", "TK_Uporabnik") VALUES
+('Pravila skupnosti', 'Prosimo, preberite pravila pred objavo. Bodite spoštljivi do ostalih članov skupnosti in se izogibajte neprimerni vsebini.', '2024-05-20', 'splosno', TRUE, 1, 1),
+('Iščem sostanovalca', 'Iščem mirnega sostanovalca za deljeno stanovanje v centru mesta. Prosta je ena soba od naslednjega meseca.', '2024-05-21', 'najemi', FALSE, 4, 2),
+('Težave s spletno stranjo', 'Stran se občasno ne odziva, predvsem pri nalaganju slik nepremičnin. Ali imate podobne izkušnje?', '2024-06-16', 'nasveti', FALSE, 3, 3),
+('Uspešna izkušnja', 'Čestitke ekipi Easy Rent za odlično platformo! Najem je potekal brez zapletov.', '2024-06-17', 'splosno', FALSE, 1, 5),
+('Pritožba glede rezervacije', 'Napačen datum na potrditvi rezervacije, prosim za pomoč pri popravku.', '2024-07-21', 'pravno', FALSE, 2, 4);
+
+-- Glasovi na forum objavah
+INSERT INTO "Glas_Forum" ("TK_Forum", "TK_Uporabnik", "Vrednost") VALUES
+(1, 2, 1),
+(1, 3, 1),
+(1, 5, 1),
+(2, 3, 1),
+(2, 5, -1),
+(4, 2, 1),
+(4, 3, 1);
 
 -- 5. Rezervacije
 INSERT INTO "Rezervacija" ("Datum_rezervacije", "TK_Nepremicnina", "TK_Uporabnik") VALUES
@@ -276,7 +307,8 @@ SELECT
 FROM "Nepremicnine" n
 ORDER BY Zasedenost_pct DESC;
 
--- 2. Kateri najemniki imajo največ rezervacij
+-- 2. Kateri najemniki imajo največ rezervacij (enaka logika kot
+--    GET /api/lestvica/najemniki)
 SELECT
     u."Username"                AS Najemnik,
     COUNT(r."ID_Rezervacija")   AS Stevilo_rezervacij
@@ -295,3 +327,14 @@ JOIN "Rezervacija" r ON r."TK_Nepremicnina" = n."ID_Nepremicnina"
 JOIN "Ocena" o        ON o."TK_Rezervacija" = r."ID_Rezervacija"
 GROUP BY n."ID_Nepremicnina", n."Ime_nepremicnine"
 ORDER BY Povprecna_ocena DESC;
+
+-- 4. Najbolj aktivni lastniki nepremičnin (enaka logika kot
+--    GET /api/lestvica/lastniki)
+SELECT
+    u."Username"                        AS Lastnik,
+    COUNT(DISTINCT n."ID_Nepremicnina")  AS Stevilo_nepremicnin,
+    COALESCE(SUM(n."Trenutno_gostov"),0) AS Skupno_gostov
+FROM "Uporabnik" u
+JOIN "Nepremicnine" n ON n."TK_Uporabnik" = u."ID_Uporabnik"
+GROUP BY u."ID_Uporabnik", u."Username"
+ORDER BY Stevilo_nepremicnin DESC;

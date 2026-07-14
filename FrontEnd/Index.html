@@ -173,7 +173,7 @@
     );
   }
 
-  /* ── Ob nalaganju strani preveri ali je uporabnik prijavljen ───── */
+  /*  Ob nalaganju strani preveri ali je uporabnik prijavljen  */
   function preveriPrijavo() {
     const token    = localStorage.getItem('token');
     const username = localStorage.getItem('username');
@@ -185,7 +185,7 @@
     }
   }
 
-  /* ── Odjava  */
+  /*  Odjava  */
   function odjava() {
     localStorage.removeItem('token');
     localStorage.removeItem('vloga');
@@ -203,7 +203,7 @@
     setTimeout(() => t.remove(), 3500);
   }
 
-  /* ── Nepremičnine za domačo stran (prosta + kmalu prosta) ───────── */
+  /* Nepremičnine za domačo stran (prosta + kmalu prosta) */
   async function naloziDomacoStran() {
     try {
       const res  = await fetch('/api/nepremicnine');

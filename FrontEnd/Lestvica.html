@@ -31,6 +31,10 @@
       <a class="nav-link" href="profil.html">Profil</a>
     </div>
     <div class="nav-actions">
+      <div class="notif-btn" onclick="toggleNotif()" id="notifBtn">
+        🔔
+        <div class="notif-badge" id="notifBadge">0</div>
+      </div>
       <div id="authButtons" style="display:flex;gap:0.5rem">
         <button class="btn-ghost" onclick="openModal('login')" style="margin-right:0.5rem">Prijava</button>
         <button class="btn-primary" onclick="openModal('register')">Registracija</button>
@@ -41,6 +45,14 @@
       </div>
     </div>
   </nav>
+
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header">
+      <div class="notif-title">Obvestila</div>
+      <div class="notif-clear" onclick="clearNotif()">Označi vse kot prebrano</div>
+    </div>
+    <div id="notifItemsContainer"></div>
+  </div>
 
   <!--
     Modalni dialog za avtentikacijo (skupen vsem podstranem).
@@ -175,49 +187,33 @@
 
 
 <script>
-  /*
-   * Statični podatki o najemnikih za lestvico.
-   * TODO: nadomestiti s klicem na backend API (GET /api/leaderboard/najemniki).
-   *
-   * Polja:
-   *   name, tag     - prikazno ime in uporabniška oznaka
-   *   game          - tip nepremičnine, ki jo najemnik najpogosteje najema (za filtriranje)
-   *   wins          - število uspešno zaključenih najemov
-   *   points        - skupne točke zvestobe
-   *   tournaments   - povprečna ocena, ki jo je najemnik prejel od lastnikov (x10, da se ujema s prikazom)
-   *   trend         - smer gibanja (navzgor/navzdol/enako) na lestvici ta mesec
-   *   tColor        - barva trenda
-   *   avatar        - inicialke za avatar
-   *   avatarBg      - barva ozadja avatarja
-   */
-  const players = [
-    { name:'Nina Kovač',    tag:'@nina.k',    game:'apartma', wins:24, points:2840, tournaments:49, trend:'navzgor',  tColor:'var(--accent-green)', avatar:'NK', avatarBg:'var(--accent-purple)' },
-    { name:'Luka Zupan',    tag:'@luka.z',    game:'hisa',    wins:19, points:2490, tournaments:47, trend:'navzgor',  tColor:'var(--accent-green)', avatar:'LZ', avatarBg:'var(--accent-cyan)'   },
-    { name:'Ana Horvat',    tag:'@ana.h',     game:'vila',    wins:16, points:2210, tournaments:48, trend:'enako',    tColor:'var(--text-muted)',   avatar:'AH', avatarBg:'var(--accent-pink)'   },
-    { name:'Rok Potočnik',  tag:'@rok.p',     game:'apartma', wins:14, points:1980, tournaments:45, trend:'navzgor',  tColor:'var(--accent-green)', avatar:'RP', avatarBg:'var(--accent-orange)' },
-    { name:'Maja Kranjc',   tag:'@maja.k',    game:'kabina',  wins:12, points:1740, tournaments:44, trend:'navzdol',  tColor:'#ff4466',             avatar:'MK', avatarBg:'var(--accent-purple)' },
-    { name:'Jure Novak',    tag:'@jure.n',    game:'hisa',    wins:10, points:1510, tournaments:46, trend:'navzgor',  tColor:'var(--accent-green)', avatar:'JN', avatarBg:'var(--accent-cyan)'   },
-    { name:'Eva Vidmar',    tag:'@eva.v',     game:'apartma', wins:8,  points:1280, tournaments:43, trend:'enako',    tColor:'var(--text-muted)',   avatar:'EV', avatarBg:'var(--accent-pink)'   },
-    { name:'Tim Golob',     tag:'@tim.g',     game:'vila',    wins:6,  points:1090, tournaments:41, trend:'navzdol',  tColor:'#ff4466',             avatar:'TG', avatarBg:'var(--accent-orange)' },
-  ];
 
-  /*
-   * Statični podatki o lastnikih nepremičnin za lestvico.
-   * TODO: nadomestiti s klicem na backend API (GET /api/leaderboard/lastniki).
-   */
-  const teamsData = [
-    { name:'Novak Nepremičnine',  tag:'NOV', game:'hisa',    wins:34, points:1840, tournaments:48, trend:'navzgor',  tColor:'var(--accent-green)' },
-    { name:'Kranjska Vila d.o.o.',tag:'KRV', game:'vila',    wins:27, points:1560, tournaments:47, trend:'navzgor',  tColor:'var(--accent-green)' },
-    { name:'Obala Apartmaji',     tag:'OBA', game:'apartma', wins:23, points:1380, tournaments:46, trend:'enako',    tColor:'var(--text-muted)'   },
-    { name:'Gorenjske Kabine',    tag:'GOK', game:'kabina',  wins:18, points:1120, tournaments:44, trend:'navzdol',  tColor:'#ff4466'             },
-    { name:'Mestne Sobe LJ',      tag:'MSL', game:'apartma', wins:14, points:940,  tournaments:45, trend:'navzgor',  tColor:'var(--accent-green)' },
-    { name:'Alpski Dom',          tag:'ALD', game:'hisa',    wins:11, points:720,  tournaments:42, trend:'enako',    tColor:'var(--text-muted)'   },
-  ];
+  let najemniki = [];
+  let lastniki  = [];
+  let activeGame = 'all';
+
+  const AVATAR_BARVE = ['var(--accent-purple)', 'var(--accent-cyan)', 'var(--accent-pink)', 'var(--accent-orange)', 'var(--accent-green)'];
+
+  /* Deterministična "naključna" barva avatarja glede na uporabniško ime */
+  function barvaAvatarja(ime) {
+    let vsota = 0;
+    for (let i = 0; i < ime.length; i++) vsota += ime.charCodeAt(i);
+    return AVATAR_BARVE[vsota % AVATAR_BARVE.length];
+  }
+
+  /* Pretvori naziv tipa nepremičnine iz baze (npr. "Hiša") v id filtra (npr. "hisa") */
+  function normalizirajTip(naziv) {
+    if (!naziv) return 'ostalo';
+    return naziv
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // odstrani šumnike (š -> s ...)
+      .toLowerCase();
+  }
+
+  const TREND_BARVA = { navzgor: 'var(--accent-green)', navzdol: '#ff4466', enako: 'var(--text-muted)' };
+  const TREND_OZNAKA = { navzgor: '▲ navzgor', navzdol: '▼ navzdol', enako: '— enako' };
 
   /* Medalje za prvih tri mesta */
   const medals = ['1.', '2.', '3.'];
-
-  let activeGame = 'all';
 
   /*
    * rankIcon(i)
@@ -229,32 +225,62 @@
   }
 
   /*
+   * naloziLestvico()
+   * Naloži oba seznama (najemniki + lastniki) iz backend API-ja.
+   */
+  async function naloziLestvico() {
+    document.getElementById('lbRows').innerHTML      = '<div class="table-loading">Nalaganje...</div>';
+    document.getElementById('teamsLbRows').innerHTML = '<div class="table-loading">Nalaganje...</div>';
+    try {
+      const [resN, resL] = await Promise.all([
+        fetch('/api/lestvica/najemniki'),
+        fetch('/api/lestvica/lastniki')
+      ]);
+      najemniki = await resN.json();
+      lastniki  = await resL.json();
+    } catch (err) {
+      console.error('Napaka pri nalaganju lestvice:', err);
+      najemniki = [];
+      lastniki  = [];
+    }
+    applyFilters();
+  }
+
+  /*
    * renderPlayers(list)
    * Generira vrstice lestvice za podani seznam najemnikov.
-   * Prva vrstica je vizualno poudarjena.
    */
   function renderPlayers(list) {
-    document.getElementById('lbRows').innerHTML = list.map((p, i) => `
+    const el = document.getElementById('lbRows');
+    if (!list.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Ni podatkov o najemnikih</div><div class="empty-sub">Lestvica se napolni, ko bodo oddane prve rezervacije.</div></div>';
+      return;
+    }
+    el.innerHTML = list.map((p, i) => {
+      const avatar   = p.username.substring(0, 2).toUpperCase();
+      const ocena    = p.povprecna_ocena ? `${p.povprecna_ocena} ★` : '—';
+      return `
       <div class="lb-row" style="${i === 0 ? 'background:var(--bg-elevated)' : ''}">
         <div>${rankIcon(i)}</div>
 
         <!-- Avatar in podatki o najemniku -->
         <div style="display:flex;align-items:center;gap:0.75rem">
-          <div style="width:36px;height:36px;border-radius:50%;background:${p.avatarBg};display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;color:var(--bg-card)">${p.avatar}</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:${barvaAvatarja(p.username)};display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0;color:var(--bg-card)">${avatar}</div>
           <div>
-            <div style="font-weight:600;font-size:0.9rem">${p.name}</div>
-            <div style="font-size:0.72rem;color:var(--text-muted);font-family:'DM Mono',monospace">${p.tag}</div>
+            <div style="font-weight:600;font-size:0.9rem">${p.username}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted);font-family:'DM Mono',monospace">${p.zakljuceni_najemi} zaključenih najemov</div>
           </div>
         </div>
 
-        <div style="text-align:center;font-weight:700;color:var(--accent-cyan)">${p.wins}</div>
-        <div style="text-align:center;font-family:'Poppins',sans-serif;font-size:1.1rem;font-weight:700">${p.points}</div>
-        <div style="text-align:center;color:var(--text-secondary)">${(p.tournaments/10).toFixed(1)} ★</div>
+        <div style="text-align:center;font-weight:700;color:var(--accent-cyan)">${p.stevilo_rezervacij}</div>
+        <div style="text-align:center;font-family:'Poppins',sans-serif;font-size:1.1rem;font-weight:700">${p.tocke}</div>
+        <div style="text-align:center;color:var(--text-secondary)">${ocena}</div>
 
-        <!-- Smer gibanja na lestvici -->
-        <div style="text-align:center;font-weight:700;color:${p.tColor}">${p.trend}</div>
+        <!-- Smer gibanja na lestvici (rezervacije zadnjih 30 dni vs. prejšnjih 30 dni) -->
+        <div style="text-align:center;font-weight:700;color:${TREND_BARVA[p.trend]};font-size:0.8rem">${TREND_OZNAKA[p.trend]}</div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   /*
@@ -262,22 +288,34 @@
    * Generira vrstice lestvice za podani seznam lastnikov nepremičnin.
    */
   function renderTeamsLb(list) {
-    document.getElementById('teamsLbRows').innerHTML = list.map((t, i) => `
+    const el = document.getElementById('teamsLbRows');
+    if (!list.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Ni podatkov o lastnikih</div><div class="empty-sub">Lestvica se napolni, ko lastniki objavijo nepremičnine.</div></div>';
+      return;
+    }
+    el.innerHTML = list.map((t, i) => {
+      const oznaka = t.username.substring(0, 3).toUpperCase();
+      const ocena  = t.povprecna_ocena ? `${t.povprecna_ocena} ★` : '—';
+      return `
       <div class="lb-row" style="${i === 0 ? 'background:var(--bg-elevated)' : ''}">
         <div>${rankIcon(i)}</div>
 
         <!-- Oznaka lastnika in njegovo ime -->
         <div style="display:flex;align-items:center;gap:0.75rem">
-          <div style="width:36px;height:36px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;font-family:'Poppins',sans-serif;color:var(--accent-cyan)">${t.tag}</div>
-          <div style="font-weight:600;font-size:0.9rem">${t.name}</div>
+          <div style="width:36px;height:36px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;font-family:'Poppins',sans-serif;color:var(--accent-cyan)">${oznaka}</div>
+          <div>
+            <div style="font-weight:600;font-size:0.9rem">${t.username}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted)">${t.stevilo_nepremicnin} nepremičnin v ponudbi</div>
+          </div>
         </div>
 
-        <div style="text-align:center;font-weight:700;color:var(--accent-cyan)">${t.wins}</div>
-        <div style="text-align:center;font-family:'Poppins',sans-serif;font-size:1.1rem;font-weight:700">${t.points}</div>
-        <div style="text-align:center;color:var(--text-secondary)">${(t.tournaments/10).toFixed(1)} ★</div>
-        <div style="text-align:center;font-weight:700;color:${t.tColor}">${t.trend}</div>
+        <div style="text-align:center;font-weight:700;color:var(--accent-cyan)">${t.stevilo_oddaj}</div>
+        <div style="text-align:center;font-family:'Poppins',sans-serif;font-size:1.1rem;font-weight:700">${t.tocke}</div>
+        <div style="text-align:center;color:var(--text-secondary)">${ocena}</div>
+        <div style="text-align:center;font-weight:700;color:${TREND_BARVA[t.trend]};font-size:0.8rem">${TREND_OZNAKA[t.trend]}</div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   /*
@@ -293,11 +331,12 @@
 
   /*
    * applyFilters()
-   * Filtrira podatke po tipu nepremičnine in osveži obe tabeli (najemniki in lastniki).
+   * Filtrira podatke po tipu nepremičnine (izpeljano iz dejanskih rezervacij/
+   * objav v bazi) in osveži obe tabeli (najemniki in lastniki).
    */
   function applyFilters() {
-    const pl = activeGame === 'all' ? players    : players.filter(p => p.game === activeGame);
-    const tm = activeGame === 'all' ? teamsData  : teamsData.filter(t => t.game === activeGame);
+    const pl = activeGame === 'all' ? najemniki : najemniki.filter(p => normalizirajTip(p.tip) === activeGame);
+    const tm = activeGame === 'all' ? lastniki  : lastniki.filter(t => normalizirajTip(t.tip) === activeGame);
     renderPlayers(pl);
     renderTeamsLb(tm);
   }
@@ -332,8 +371,8 @@
     );
   }
 
-  // Začetni prikaz ob nalaganju strani
-  applyFilters();
+  // Začetni prikaz ob nalaganju strani — naloži prave podatke iz baze
+  naloziLestvico();
 
   function odjava() {
     localStorage.removeItem('token');
@@ -355,6 +394,58 @@
     if (um) um.style.display = 'flex';
     if (av) av.textContent   = username.substring(0,2).toUpperCase();
   })();
+  /* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+  let obvestilaCache = [];
+
+  async function loadNotifications() {
+    const token = localStorage.getItem('token');
+    if (!token) { updateNotifBadge(); return; }
+    try {
+      const res = await fetch('/api/obvestila', { headers: { Authorization: 'Bearer ' + token } });
+      obvestilaCache = res.ok ? await res.json() : [];
+    } catch {
+      obvestilaCache = [];
+    }
+    updateNotifBadge();
+  }
+
+  function updateNotifBadge() {
+    const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano).length;
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.textContent = unread;
+  }
+
+  function toggleNotif() {
+    const panel = document.getElementById('notifPanel');
+    const isOpen = panel.style.display === 'block';
+    panel.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+      const container = document.getElementById('notifItemsContainer');
+      if (!container) return;
+      if (!localStorage.getItem('token')) {
+        container.innerHTML = `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Prijavi se, da vidiš obvestila.</div>`;
+        return;
+      }
+      container.innerHTML = obvestilaCache.length === 0
+        ? `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Ni novih obvestil</div>`
+        : obvestilaCache.slice(0, 10).map(o => `
+            <div class="notif-item">
+              <div class="notif-msg">${o.Vsebina || o.vsebina || ''}</div>
+            </div>`).join('');
+    }
+  }
+
+  function clearNotif() {
+    document.getElementById('notifPanel').style.display = 'none';
+  }
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('notifPanel');
+    const btn   = document.getElementById('notifBtn');
+    if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+      panel.style.display = 'none';
+    }
+  });
+  loadNotifications();
 
 </script>
 <script src="login.js"></script>

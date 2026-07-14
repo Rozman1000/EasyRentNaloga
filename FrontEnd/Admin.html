@@ -29,12 +29,24 @@
       <a class="nav-link" href="profil.html">Profil</a>
     </div>
     <div class="nav-actions">
+      <div class="notif-btn" onclick="toggleNotif()" id="notifBtn">
+        🔔
+        <div class="notif-badge" id="notifBadge">0</div>
+      </div>
       <div id="userMenu" style="display:none;align-items:center;gap:.5rem">
         <div class="user-avatar" id="userAvatar" title="Profil">--</div>
         <button class="btn-ghost" onclick="odjava()">Odjava</button>
       </div>
     </div>
   </nav>
+
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header">
+      <div class="notif-title">Obvestila</div>
+      <div class="notif-clear" onclick="clearNotif()">Označi vse kot prebrano</div>
+    </div>
+    <div id="notifItemsContainer"></div>
+  </div>
 
   <div class="toast-container" id="toastContainer"></div>
 
@@ -448,7 +460,7 @@ async function izbrisiUporabnika(id, name) {
 async function naloziForumObjave() {
   const el = document.getElementById('forumModList');
   try {
-    const res = await fetch(API + '/api/forum', { headers: auth() });
+    const res = await fetch(API + '/api/forum/admin', { headers: auth() });
     if (!res.ok) throw new Error();
     const lista = await res.json();
     if (!lista.length) { el.innerHTML = '<div style="color:var(--text-muted);padding:1rem">Ni forum objav.</div>'; return; }
@@ -551,7 +563,60 @@ function showToast(msg, tip='ok') {
   setTimeout(() => t.remove(), 3500);
 }
 
+/* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+let obvestilaCache = [];
+
+async function loadNotifications() {
+  const token = localStorage.getItem('adminToken') || adminToken;
+  if (!token) { updateNotifBadge(); return; }
+  try {
+    const res = await fetch('/api/obvestila', { headers: { Authorization: 'Bearer ' + token } });
+    obvestilaCache = res.ok ? await res.json() : [];
+  } catch {
+    obvestilaCache = [];
+  }
+  updateNotifBadge();
+}
+
+function updateNotifBadge() {
+  const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano).length;
+  const badge = document.getElementById('notifBadge');
+  if (badge) badge.textContent = unread;
+}
+
+function toggleNotif() {
+  const panel = document.getElementById('notifPanel');
+  const isOpen = panel.style.display === 'block';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const container = document.getElementById('notifItemsContainer');
+    if (!container) return;
+    if (!adminToken) {
+      container.innerHTML = `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Prijavi se, da vidiš obvestila.</div>`;
+      return;
+    }
+    container.innerHTML = obvestilaCache.length === 0
+      ? `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Ni novih obvestil</div>`
+      : obvestilaCache.slice(0, 10).map(o => `
+          <div class="notif-item">
+            <div class="notif-msg">${o.Vsebina || o.vsebina || ''}</div>
+          </div>`).join('');
+  }
+}
+
+function clearNotif() {
+  document.getElementById('notifPanel').style.display = 'none';
+}
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('notifPanel');
+  const btn   = document.getElementById('notifBtn');
+  if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.style.display = 'none';
+  }
+});
+
 preveriAdmina();
+loadNotifications();
 </script>
 </body>
 </html>

@@ -1,14 +1,4 @@
-/* ===================================================================
-   EASY RENT — barvna paleta
-   Prej "Game Arena Hub" (temna nevonska tema z gradienti).
-   Spremenjeno v toplo, svetlo bež temo BREZ gradientov, primerno za
-   stran za oddajo/najem nepremičnin.
-   OPOMBA: imena spremenljivk (--bg-dark, --accent-cyan ...) so ostala
-   enaka kot prej, da ni bilo treba ročno preimenovati na stotine mest
-   po celotnem style.css in HTML datotekah — spremenile so se samo
-   VREDNOSTI. Če želiš, jih lahko kasneje preimenuješ (npr.
-   --accent-cyan → --accent-terracotta), a funkcionalno je to enako.
-   =================================================================== */
+
 :root {
   --bg-dark: #f3ead9;        /* glavno ozadje strani — topla bež */
   --bg-card: #fffaf1;        /* kartice, navbar — skoraj bela, toplo obarvana */
@@ -203,9 +193,7 @@ body {
   border-radius: 100px; padding: 0.6rem 1.1rem;
   font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
   display: flex; align-items: center; gap: 0.5rem;
-  transform: rotate(-0.6deg);
 }
-.feature-chip:nth-child(even) { transform: rotate(0.6deg); }
 .feature-chip:hover { border-style: solid; border-color: var(--accent-cyan); color: var(--text-primary); }
 
 /* ── section headeri ─── */

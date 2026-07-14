@@ -1,27 +1,3 @@
-/**
- * statistika.js — Easy Rent
- *
- * OPOMBA ZA PREGLED: to je popolnoma nova datoteka, ki nadomesti prejšnji
- * bracket.js. Prejšnja datoteka (607 vrstic) je generirala in vodila
- * single-elimination turnirski bracket (pari, runde, napredovanje
- * zmagovalcev, shranjevanje v localStorage). Ta logika za najem nepremičnin
- * nima smisla, zato je bila v celoti odstranjena.
- *
- * Namesto tega ta datoteka izračuna in izriše preprosto RANG LESTVICO
- * nepremičnin — katere so bile največkrat rezervirane in katere imajo
- * najboljše ocene ("najbolj uspešne").
- *
- * FUNKCIONALNOSTI:
- *  - loadStats()               → naloži podatke o nepremičninah iz API-ja
- *  - renderTopRentedChart(list) → izriše lestvico "Največ rezervacij"
- *  - renderTopRatedChart(list)  → izriše lestvico "Najbolje ocenjene"
- *
- * PODATKI:
- *  Statistika trenutno temelji na podatkih, ki jih že vrača
- *  GET /api/nepremicnine (Trenutno_gostov kot približek priljubljenosti).
- *  Ko bo na strežniku na voljo namenski endpoint GET /api/statistika/top
- *  (glej server.js), ga uporabi namesto tega.
- */
 
 const StatsEngine = (() => {
 

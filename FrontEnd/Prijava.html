@@ -29,9 +29,21 @@
       <a class="nav-link" href="profil.html">Profil</a>
     </div>
     <div class="nav-actions">
+      <div class="notif-btn" onclick="toggleNotif()" id="notifBtn">
+        🔔
+        <div class="notif-badge" id="notifBadge">0</div>
+      </div>
       <button class="btn-ghost" onclick="window.location='index.html'">← Nazaj</button>
     </div>
   </nav>
+
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-header">
+      <div class="notif-title">Obvestila</div>
+      <div class="notif-clear" onclick="clearNotif()">Označi vse kot prebrano</div>
+    </div>
+    <div id="notifItemsContainer"></div>
+  </div>
 
   <div class="auth-page">
     <div class="auth-card">
@@ -41,9 +53,6 @@
         <div class="auth-logo-sub">Prijava v svoj račun</div>
       </div>
 
-      <!-- POPRAVEK: odstranjen action="/login" (klasičen form submit bi prikazal surovi JSON).
-           Namesto tega se ob kliku pokliče doLogin() iz login.js, ki naredi fetch().
-           Inputa imata id="loginUser" in id="loginPass" kot zahteva login.js. -->
       <div class="form-group">
         <label class="form-label">E-pošta</label>
         <input type="email" class="form-input" placeholder="tvoj@email.com" id="loginUser">
@@ -66,7 +75,6 @@
 </div>
 
 <script>
-  // POPRAVEK: fetch login za samostojno prijavo.html stran.
   // Po uspešni prijavi shrani token in preusmeri na index.html.
   function doLoginStran() {
     const email  = document.getElementById('loginUser').value.trim();
@@ -103,6 +111,59 @@
       napaka.style.display = 'block';
     });
   }
+
+  /* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+  let obvestilaCache = [];
+
+  async function loadNotifications() {
+    const token = localStorage.getItem('token');
+    if (!token) { updateNotifBadge(); return; }
+    try {
+      const res = await fetch('/api/obvestila', { headers: { Authorization: 'Bearer ' + token } });
+      obvestilaCache = res.ok ? await res.json() : [];
+    } catch {
+      obvestilaCache = [];
+    }
+    updateNotifBadge();
+  }
+
+  function updateNotifBadge() {
+    const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano).length;
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.textContent = unread;
+  }
+
+  function toggleNotif() {
+    const panel = document.getElementById('notifPanel');
+    const isOpen = panel.style.display === 'block';
+    panel.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+      const container = document.getElementById('notifItemsContainer');
+      if (!container) return;
+      if (!localStorage.getItem('token')) {
+        container.innerHTML = `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Prijavi se, da vidiš obvestila.</div>`;
+        return;
+      }
+      container.innerHTML = obvestilaCache.length === 0
+        ? `<div style="padding:1rem;color:var(--text-muted);font-size:0.85rem;text-align:center">Ni novih obvestil</div>`
+        : obvestilaCache.slice(0, 10).map(o => `
+            <div class="notif-item">
+              <div class="notif-msg">${o.Vsebina || o.vsebina || ''}</div>
+            </div>`).join('');
+    }
+  }
+
+  function clearNotif() {
+    document.getElementById('notifPanel').style.display = 'none';
+  }
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('notifPanel');
+    const btn   = document.getElementById('notifBtn');
+    if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+      panel.style.display = 'none';
+    }
+  });
+  loadNotifications();
 </script>
 
 </body>
