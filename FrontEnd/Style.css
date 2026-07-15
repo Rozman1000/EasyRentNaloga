@@ -1,4 +1,3 @@
-
 :root {
   --bg-dark: #f3ead9;        /* glavno ozadje strani — bež */
   --bg-card: #fffaf1;        /* kartice, navbar — skoraj bela, toplo obarvana */
@@ -202,13 +201,13 @@ body {
 .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem; }
 
 /* ─── tournament card (turnirji.html) ─── */
-.tournament-card {
+.property-card {
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 0; overflow: hidden;
   transition: all 0.25s; cursor: pointer;
   display: flex; flex-direction: column;
 }
-.tournament-card:hover {
+.property-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 12px 40px rgba(0,0,0,0.4), var(--glow-cyan);
   border-color: rgba(181,98,47,0.25);
@@ -224,15 +223,15 @@ body {
 .t-status.upcoming   { background: rgba(107,97,66,0.15); color: var(--accent-purple); border: 1px solid rgba(107,97,66,0.3); }
 .t-status.completed  { background: rgba(74,82,112,0.3);   color: var(--text-muted);    border: 1px solid var(--border);        }
 .t-name { font-family: 'Poppins', sans-serif; font-size: 1.15rem; font-weight: 700; margin-bottom: 0.3rem; line-height: 1.3; }
-.t-game { font-size: 0.78rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 5px; display: inline-block; margin-bottom: 0.85rem; }
+.t-type { font-size: 0.78rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 5px; display: inline-block; margin-bottom: 0.85rem; }
 .t-meta { display: flex; flex-direction: column; gap: 0.4rem; padding: 0 1.25rem 1rem; flex: 1; }
 .t-meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
 .t-meta-key   { color: var(--text-muted); }
 .t-meta-value { font-weight: 600; }
 .t-divider { height: 1px; background: var(--border); margin: 0 1.25rem; }
 .t-footer { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; }
-.t-prize { font-family: 'Poppins', sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--accent-green); }
-.t-prize-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; }
+.t-price { font-family: 'Poppins', sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--accent-green); }
+.t-price-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; }
 .t-progress { padding: 0 1.25rem 1rem; }
 .t-progress-label { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 0.35rem; }
 
@@ -558,9 +557,9 @@ body {
   padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
-.badge-pro { background: rgba(181,98,47,0.15); color: var(--accent-cyan); border: 1px solid rgba(181,98,47,0.3); }
-.badge-mvp { background: rgba(185,128,58,0.15); color: var(--accent-orange); border: 1px solid rgba(185,128,58,0.3); }
-.badge-veteran { background: rgba(107,97,66,0.15); color: var(--accent-purple); border: 1px solid rgba(107,97,66,0.3); }
+.badge-top { background: rgba(181,98,47,0.15); color: var(--accent-cyan); border: 1px solid rgba(181,98,47,0.3); }
+.badge-reliable { background: rgba(185,128,58,0.15); color: var(--accent-orange); border: 1px solid rgba(185,128,58,0.3); }
+.badge-experienced { background: rgba(107,97,66,0.15); color: var(--accent-purple); border: 1px solid rgba(107,97,66,0.3); }
 .profile-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-left: auto; }
 .profile-stat { text-align: center; }
 .profile-stat-val { font-family: 'Poppins', sans-serif; font-size: 1.6rem; font-weight: 700; }
@@ -644,7 +643,7 @@ body {
 }
 .btn-reject:hover { background: rgba(255,68,102,0.25); }
 
-/* ─── admin: moderation table & tabs (admin.html) ─── */
+/* ─── admin: izgledi za admin stran (admin.html) ─── */
 .mod-table { width:100%; border-collapse:collapse; font-size:0.87rem; }
 .mod-table th { background:var(--bg-elevated); color:var(--text-secondary); font-size:0.72rem; text-transform:uppercase; letter-spacing:.5px; padding:.6rem 1rem; text-align:left; border-bottom:1px solid var(--border); }
 .mod-table td { padding:.75rem 1rem; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }

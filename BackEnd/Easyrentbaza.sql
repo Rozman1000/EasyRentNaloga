@@ -1,4 +1,3 @@
-
 -- brisanje tabel
 DROP TABLE IF EXISTS "Glas_Forum" CASCADE;
 DROP TABLE IF EXISTS "Ocena" CASCADE;
@@ -80,7 +79,7 @@ CREATE TABLE "Popust" (
 -- Obvestila uporabnikov
 CREATE TABLE "Obvestila" (
                              "ID_Obvestilo"     SERIAL PRIMARY KEY,
-                             "TK_Nepremicnina"  INTEGER      NOT NULL,
+                             "TK_Nepremicnina"  INTEGER,               -- neobvezno: null pri splošnih/admin obvestilih
                              "Vsebina"          VARCHAR(255) NOT NULL,
                              "Tip_obvestila"    INTEGER      NOT NULL,
                              "TK_Uporabnik"     INTEGER      NOT NULL,
@@ -114,7 +113,8 @@ CREATE TABLE "Rezervacija" (
                            "ID_Rezervacija"     SERIAL PRIMARY KEY,
                            "Datum_rezervacije"  DATE         NOT NULL,
                            "TK_Nepremicnina"    INTEGER      NOT NULL, -- rezervirana nepremičnina
-                           "TK_Uporabnik"       INTEGER      NOT NULL  -- uporabnik, ki je rezerviral
+                           "TK_Uporabnik"       INTEGER      NOT NULL, -- uporabnik, ki je rezerviral
+                           "Stevilo_gostov"     INTEGER      NOT NULL DEFAULT 1 -- št. gostov ob tej rezervaciji (za pravilno odjavo)
 );
 
 -- Ocene nastanitev
@@ -147,6 +147,10 @@ ALTER TABLE "Rezervacija"  ADD CONSTRAINT fk_rezervacija_uporabnik      FOREIGN 
 ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_rezervacija          FOREIGN KEY ("TK_Rezervacija")      REFERENCES "Rezervacija"("ID_Rezervacija") ON DELETE CASCADE;
 ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_forum                FOREIGN KEY ("TK_Forum")            REFERENCES "Forum"("ID_Forum") ON DELETE SET NULL;
 ALTER TABLE "Ocena"        ADD CONSTRAINT fk_ocena_uporabnik            FOREIGN KEY ("TK_Uporabnik")        REFERENCES "Uporabnik"("ID_Uporabnik") ON DELETE SET NULL;
+
+-- dodatne spremembe za delovanje rezervacij in obvestil
+ALTER TABLE "Rezervacija" ADD COLUMN IF NOT EXISTS "Stevilo_gostov" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "Obvestila" ALTER COLUMN "TK_Nepremicnina" DROP NOT NULL;
 
 
 -- 1. Osnovne tabele

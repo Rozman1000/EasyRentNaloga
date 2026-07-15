@@ -1,22 +1,20 @@
-
-
 function doRegister() {
   // Validacija — vrne false če je kaj narobe
   const formaJePravilna = validiraj();
   if (!formaJePravilna) return;
 
   // Pridobi vrednosti
-  const gamerTag = document.getElementById("preveriGamerTag").value.trim();
+  const uporabniskoIme = document.getElementById("preveriUporabnisko").value.trim();
   const ePosta   = document.getElementById("preveriEPosta").value.trim();
   const geslo    = document.getElementById("preveriGeslo").value.trim();
 
-  podatkiNaServerRegister(gamerTag, ePosta, geslo);
+  podatkiNaServerRegister(uporabniskoIme, ePosta, geslo);
 }
 
 
-function podatkiNaServerRegister(gamerTag, ePosta, geslo) {
+function podatkiNaServerRegister(uporabniskoIme, ePosta, geslo) {
   const podatki = {
-    Username: gamerTag,
+    Username: uporabniskoIme,
     Email:    ePosta,
     Geslo:    geslo
   };
@@ -49,10 +47,10 @@ function podatkiNaServerRegister(gamerTag, ePosta, geslo) {
       }
     } else {
       // Prikaži napako od serverja
-      const nGamerTag = document.getElementById("napakaGamerTag");
-      if (nGamerTag) {
-        nGamerTag.innerHTML = data.error || "Napaka pri registraciji.";
-        nGamerTag.style.display = "block";
+      const nUporabniskoIme = document.getElementById("napakaUporabnisko");
+      if (nUporabniskoIme) {
+        nUporabniskoIme.innerHTML = data.error || "Napaka pri registraciji.";
+        nUporabniskoIme.style.display = "block";
       } else {
         alert(data.error || "Napaka pri registraciji.");
       }
@@ -68,25 +66,25 @@ function podatkiNaServerRegister(gamerTag, ePosta, geslo) {
 function validiraj() {
   let formaJePravilna = true;
 
-  const gamerTag = document.getElementById("preveriGamerTag").value.trim();
+  const uporabniskoIme = document.getElementById("preveriUporabnisko").value.trim();
   const ePosta   = document.getElementById("preveriEPosta").value.trim();
   const geslo    = document.getElementById("preveriGeslo").value.trim();
 
-  const nGamerTag = document.getElementById("napakaGamerTag");
+  const nUporabniskoIme = document.getElementById("napakaUporabnisko");
   const nEPosta   = document.getElementById("napakaEPosta");
   const nGesla    = document.getElementById("napakaGesla");
 
-  nGamerTag.style.display = "none";
+  nUporabniskoIme.style.display = "none";
   nEPosta.style.display   = "none";
   nGesla.style.display    = "none";
 
-  const maxLenGamerTag = 16;
+  const maxLenUporabniskoIme = 16;
 
-  if (gamerTag === "" || gamerTag.length > maxLenGamerTag) {
-    nGamerTag.innerHTML = gamerTag === ""
+  if (uporabniskoIme === "" || uporabniskoIme.length > maxLenUporabniskoIme) {
+    nUporabniskoIme.innerHTML = uporabniskoIme === ""
       ? "Uporabniško ime ne sme biti prazno."
-      : `Uporabniško ime ne more biti daljše od ${maxLenGamerTag} znakov.`;
-    nGamerTag.style.display = "block";
+      : `Uporabniško ime ne more biti daljše od ${maxLenUporabniskoIme} znakov.`;
+    nUporabniskoIme.style.display = "block";
     formaJePravilna = false;
   }
 

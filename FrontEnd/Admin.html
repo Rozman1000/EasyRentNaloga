@@ -67,10 +67,9 @@
 
       <!-- Statistika -->
       <div class="admin-grid" style="margin-bottom:2rem">
-        <div class="admin-card"><div class="admin-icon">⏳</div><div><div class="admin-val" id="adminPendingApproval">--</div><div class="admin-label">Čaka na potrditev</div></div></div>
-        <div class="admin-card"><div class="admin-icon">👥</div><div><div class="admin-val" id="adminTotalUsers">--</div><div class="admin-label">Skupaj uporabnikov</div></div></div>
-        <div class="admin-card"><div class="admin-icon">🚨</div><div><div class="admin-val" id="adminReportedContent">--</div><div class="admin-label">Moderacij danes</div></div></div>
-        <div class="admin-card"><div class="admin-icon">🏆</div><div><div class="admin-val" id="adminActiveListings">--</div><div class="admin-label">Aktivnih nepremičnin</div></div></div>
+        <div class="admin-card"><div class="admin-icon"></div><div><div class="admin-val" id="adminPendingApproval">--</div><div class="admin-label">Čaka na potrditev</div></div></div>
+        <div class="admin-card"><div class="admin-icon"></div><div><div class="admin-val" id="adminTotalUsers">--</div><div class="admin-label">Skupaj uporabnikov</div></div></div>
+        <div class="admin-card"><div class="admin-icon"></div><div><div class="admin-val" id="adminActiveListings">--</div><div class="admin-label">Aktivnih nepremičnin</div></div></div>
       </div>
 
       <!-- Admin zavihki -->
@@ -80,9 +79,10 @@
         <div class="admin-tab" onclick="switchAdminTab('uporabniki', this)">Uporabniki</div>
         <div class="admin-tab" onclick="switchAdminTab('forum', this)">Forum Komentarji</div>
         <div class="admin-tab" onclick="switchAdminTab('feedback', this)">Feedback Ocene</div>
+        <div class="admin-tab" onclick="switchAdminTab('obvestila', this)">Obvestila</div>
       </div>
 
-      <!-- tab nepremičnine (DB tabela "Turnir" zdaj hrani nepremičnine, glej opombo v server.js) -->
+      <!-- tab nepremičnine -->
       <div id="adminTab-nepremicnine">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
           <div class="section-title">Upravljanje nepremičnin</div>
@@ -90,7 +90,7 @@
         <div id="adminNepremicnine" style="margin-bottom:2rem"></div>
 
         <div class="section-title" style="margin-bottom:1rem">Nepremičnine čakajo na odobritev</div>
-        <div id="pendingTournaments"></div>
+        <div id="pendingNepremicnine"></div>
       </div>
 
       <!-- tab moderacija -->
@@ -171,6 +171,33 @@
         </div>
       </div>
 
+      <!-- tab obvestila -->
+      <div id="adminTab-obvestila" style="display:none">
+        <div class="section-title" style="margin-bottom:1rem">Pošlji obvestilo uporabnikom</div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;max-width:640px">
+          <div class="form-group">
+            <label class="form-label">Prejemnik</label>
+            <select class="form-input" id="obvPrejemnik">
+              <option value=""> Vsi uporabniki (razen blokiranih)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Vrsta obvestila</label>
+            <select class="form-input" id="obvTip">
+              <option value="1">Splošno obvestilo</option>
+              <option value="2">Pomembna sprememba</option>
+              <option value="3">Rezervacija</option>
+              <option value="4">Opozorilo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sporočilo</label>
+            <textarea class="form-input" id="obvVsebina" rows="4" placeholder="Vsebina obvestila..."></textarea>
+          </div>
+          <button class="btn-primary" onclick="posljiObvestilo()" style="width:100%">Pošlji obvestilo</button>
+        </div>
+      </div>
+
     </div><!-- /adminVsebina -->
   </div><!-- /adminPage -->
 
@@ -247,51 +274,117 @@ async function naloziAdminStats() {
     const d = await res.json();
     document.getElementById('adminPendingApproval').textContent = d.pending   ?? '--';
     document.getElementById('adminTotalUsers').textContent      = d.users     ?? '--';
-    document.getElementById('adminReportedContent').textContent = d.moderacije ?? '--';
     document.getElementById('adminActiveListings').textContent     = d.nepremicnine     ?? '--';
   } catch { /* tiho */ }
 }
 
-/* nepremičnine (poizvedbe še vedno ciljajo na tabelo "Turnir" — glej OPOMBO v server.js zakaj imena stolpcev niso bila preimenovana) */
+/* nepremičnine — prikazane v tabeli, z lastnikom, statusom in gumbom za brisanje, ki resnično kliče backend */
 async function naloziNepremicnine() {
+  const el = document.getElementById('adminNepremicnine');
   try {
     const res  = await fetch(API + '/api/nepremicnine', { headers: auth() });
     const data = await res.json();
-    if (!Array.isArray(data)) return;
+    if (!Array.isArray(data)) throw new Error('Neveljaven odgovor strežnika.');
 
-    // Zapolni select v modal
+    // Zapolni select v modalu za moderacijske ukrepe
     const sel = document.getElementById('modNepremicninaId');
     sel.innerHTML = '<option value="">-- Izberi nepremičnino --</option>';
     data.forEach(t => {
       const opt = document.createElement('option');
-      opt.value = t.ID_Turnir || t.id;
-      opt.textContent = '#' + (t.ID_Turnir || t.id) + ' — ' + (t.Ime_turnirja || t.ime_turnirja || t.ime || 'Nepremičnina');
+      opt.value = t.ID_Nepremicnina || t.id;
+      opt.textContent = '#' + (t.ID_Nepremicnina || t.id) + ' — ' + (t.Ime_nepremicnine || t.ime_nepremicnine || t.ime || 'Nepremičnina');
       sel.appendChild(opt);
     });
 
-    document.getElementById('adminNepremicnine').innerHTML = data.map(t => `
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
-        <div>
-          <div style="font-weight:700">${t.Ime_turnirja || t.ime_turnirja || t.ime || 'Nepremičnina #'+(t.ID_Turnir||t.id)}</div>
-          <div style="font-size:.8rem;color:var(--text-secondary)">${t.Datum||t.datum ? new Date(t.Datum||t.datum).toLocaleDateString('sl-SI') : '--'} · ${t.Lokacija||t.lokacija||'--'} · ${t.Naslov_igre||t.igra||'--'}</div>
-        </div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <button onclick="potrdiNepremicnino(${t.ID_Turnir||t.id})" class="action-btn btn-green">✓ Potrdi</button>
-          <button onclick="blokirajNepremicnino(${t.ID_Turnir||t.id})" class="action-btn btn-orange">⏸ Blokiraj</button>
-          <button onclick="izbrisiNepremicnino(${t.ID_Turnir||t.id})" class="action-btn btn-red">✕ Izbriši</button>
-        </div>
-      </div>`).join('') || '<p style="color:var(--text-muted)">Ni nepremičnin.</p>';
-  } catch (err) { console.error(err); }
+    if (!data.length) {
+      el.innerHTML = '<p style="color:var(--text-muted)">Ni nepremičnin.</p>';
+      return;
+    }
+
+    el.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden">
+        <table class="mod-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Naziv</th>
+              <th>Tip</th>
+              <th>Lokacija</th>
+              <th>Lastnik</th>
+              <th>Cena / noč</th>
+              <th>Status</th>
+              <th>Dejanja</th>
+            </tr>
+          </thead>
+          <tbody id="nepremicnineBody"></tbody>
+        </table>
+      </div>`;
+
+    const tbody = document.getElementById('nepremicnineBody');
+    tbody.innerHTML = data.map(t => {
+      const id     = t.ID_Nepremicnina || t.id;
+      const status = (t.Status || t.status || 'upcoming').toLowerCase();
+      const statusLabel = status === 'live' ? 'Prosto' : status === 'completed' ? 'Zasedeno' : status === 'blokiran' ? 'Blokirano' : 'Kmalu prosto';
+      const statusColor = status === 'live' ? 'var(--accent-green)' : status === 'blokiran' ? '#ff4466' : status === 'completed' ? 'var(--text-secondary)' : 'var(--accent-orange)';
+      return `
+      <tr id="np-row-${id}">
+        <td style="color:var(--text-muted);font-family:'DM Mono',monospace">#${id}</td>
+        <td style="font-weight:700">${t.Ime_nepremicnine || t.ime_nepremicnine || t.ime || '--'}</td>
+        <td style="color:var(--text-secondary)">${t.Tip || t.igra || '--'}</td>
+        <td style="color:var(--text-secondary)">${t.Lokacija || t.lokacija || '--'}</td>
+        <td style="color:var(--text-secondary)">${t.Lastnik || '--'}</td>
+        <td style="color:var(--accent-cyan);font-weight:600">${t.Cena_na_noc || t.cena || '--'} €</td>
+        <td><span style="color:${statusColor};font-size:.78rem;font-weight:700;text-transform:uppercase">${statusLabel}</span></td>
+        <td>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <button onclick="potrdiNepremicnino(${id})" class="action-btn btn-green">✓ Potrdi</button>
+            <button onclick="blokirajNepremicnino(${id})" class="action-btn btn-orange">⏸ Blokiraj</button>
+            <button id="del-btn-${id}" onclick="izbrisiNepremicnino(${id})" class="action-btn btn-red">✕ Izbriši</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    console.error('Napaka pri nalaganju nepremičnin:', err);
+    el.innerHTML = '<p style="color:var(--text-muted)">Napaka pri nalaganju nepremičnin.</p>';
+  }
 }
 
 async function izbrisiNepremicnino(id) {
-  if (!confirm(`Res želiš izbrisati nepremičnino #${id}?`)) return;
+  if (!confirm(`Res želiš trajno izbrisati nepremičnino #${id}? Izbrisale se bodo tudi njene rezervacije, popusti in obvestila.`)) return;
+
+  const btn = document.getElementById('del-btn-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
   try {
-    const res  = await fetch(API + '/api/nepremicnine/' + id, { method:'DELETE', headers: auth() });
-    const data = await res.json();
-    if (data.success) { showToast('Nepremičnina izbrisana.', 'ok'); naloziNepremicnine(); naloziAdminStats(); }
-    else showToast(data.error || 'Napaka.', 'err');
-  } catch { showToast('Napaka strežnika.', 'err'); }
+    const res  = await fetch(API + '/api/nepremicnine/' + id, { method: 'DELETE', headers: auth() });
+
+    // Ce zeton ni veljaven / poteceno, backend vrne 401/403 se preden pride do izbrisa
+    if (res.status === 401 || res.status === 403) {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || 'Nimaš pravic za brisanje (preveri, ali si prijavljen kot admin).', 'err');
+      if (btn) { btn.disabled = false; btn.textContent = '✕ Izbriši'; }
+      return;
+    }
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.success) {
+      showToast(`Nepremičnina #${id} izbrisana.`, 'ok');
+      const row = document.getElementById('np-row-' + id);
+      if (row) row.remove();
+      naloziAdminStats();
+      // Ce je select ali ostali podatki potrebovali osvezitev
+      naloziNepremicnine();
+    } else {
+      showToast(data.error || `Napaka pri brisanju (HTTP ${res.status}).`, 'err');
+      if (btn) { btn.disabled = false; btn.textContent = '✕ Izbriši'; }
+    }
+  } catch (err) {
+    console.error('Napaka pri brisanju nepremičnine:', err);
+    showToast('Napaka pri povezavi s strežnikom.', 'err');
+    if (btn) { btn.disabled = false; btn.textContent = '✕ Izbriši'; }
+  }
 }
 
 async function potrdiNepremicnino(id) {
@@ -327,7 +420,7 @@ async function naloziModeracije() {
       const bCls = m.Vrsta_ukrepa === 'brisanje' ? 'mod-brisanje' : m.Vrsta_ukrepa === 'blokiranje' ? 'mod-blokiranje' : m.Vrsta_ukrepa === 'potrditev' ? 'mod-potrditev' : 'mod-opozorilo';
       return `<tr>
         <td style="color:var(--text-muted);font-family:'DM Mono',monospace">#${m.ID_Moderacija}</td>
-        <td>Nepremičnina #${m.TK_Turnir}</td>
+        <td>Nepremičnina #${m.TK_Nepremicnina}</td>
         <td>${m.Datum ? new Date(m.Datum).toLocaleDateString('sl-SI') : '--'}</td>
         <td style="max-width:200px;color:var(--text-secondary)">${m.Razlog || '--'}</td>
         <td><span class="mod-badge ${bCls}">${m.Vrsta_ukrepa}</span></td>
@@ -348,18 +441,18 @@ function zapriModModal(e) {
 }
 
 async function shraniModeracijskiUkrep() {
-  const TK_Turnir    = document.getElementById('modNepremicninaId').value;
+  const TK_Nepremicnina    = document.getElementById('modNepremicninaId').value;
   const Vrsta_ukrepa = document.getElementById('modVrsta').value;
   const Razlog       = document.getElementById('modRazlog').value.trim();
 
-  if (!TK_Turnir) { showToast('Izberi nepremičnino!', 'warn'); return; }
+  if (!TK_Nepremicnina) { showToast('Izberi nepremičnino!', 'warn'); return; }
   if (!Razlog)    { showToast('Vnesi razlog!', 'warn'); return; }
 
   try {
     const res = await fetch(API + '/api/moderacija', {
       method: 'POST',
       headers: { ...auth(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ TK_Turnir, Vrsta_ukrepa, Razlog })
+      body: JSON.stringify({ TK_Nepremicnina, Vrsta_ukrepa, Razlog })
     });
     const data = await res.json();
     if (res.ok) {
@@ -388,9 +481,53 @@ async function naloziUporabnike() {
     if (!res.ok) throw new Error();
     vsiUporabniki = await res.json();
     renderUporabnike(vsiUporabniki);
+    napolniObvPrejemnika();
   } catch {
     document.getElementById('uporabnikiBody').innerHTML =
       '<tr><td colspan="6" class="table-loading">Napaka pri nalaganju.</td></tr>';
+  }
+}
+
+function napolniObvPrejemnika() {
+  const sel = document.getElementById('obvPrejemnik');
+  if (!sel) return;
+  sel.innerHTML = '<option value=""> Vsi uporabniki (razen blokiranih)</option>' +
+    vsiUporabniki.map(u => `<option value="${u.ID_Uporabniki}">${u.Username} (${u.Email})</option>`).join('');
+}
+
+/* pošiljanje obvestil */
+async function posljiObvestilo() {
+  const prejemnik = document.getElementById('obvPrejemnik').value;
+  const tip       = document.getElementById('obvTip').value;
+  const vsebina   = document.getElementById('obvVsebina').value.trim();
+
+  if (!vsebina) { showToast('Vnesi vsebino obvestila!', 'warn'); return; }
+
+  const potrdiloBesedilo = prejemnik
+    ? 'Pošlji obvestilo izbranemu uporabniku?'
+    : 'Pošlji obvestilo VSEM uporabnikom?';
+  if (!confirm(potrdiloBesedilo)) return;
+
+  try {
+    const body = { Vsebina: vsebina, Tip_obvestila: tip };
+    if (prejemnik) body.TK_Uporabnik = prejemnik;
+
+    const res = await fetch(API + '/api/obvestila', {
+      method: 'POST',
+      headers: { ...auth(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      showToast(`Obvestilo poslano (${data.poslano} prejemnik${data.poslano === 1 ? '' : 'ov'}). ✓`, 'ok');
+      document.getElementById('obvVsebina').value = '';
+    } else {
+      showToast(data.error || 'Napaka pri pošiljanju obvestila.', 'err');
+    }
+  } catch (err) {
+    console.error('Napaka pri pošiljanju obvestila:', err);
+    showToast('Napaka pri povezavi s strežnikom.', 'err');
   }
 }
 
@@ -535,7 +672,7 @@ async function izbrisiOceno(id) {
 
 /* zavihki */
 function switchAdminTab(tab, btn) {
-  ['nepremicnine','moderacija','uporabniki','forum','feedback'].forEach(t => {
+  ['nepremicnine','moderacija','uporabniki','forum','feedback','obvestila'].forEach(t => {
     document.getElementById('adminTab-' + t).style.display = t === tab ? 'block' : 'none';
   });
   document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));

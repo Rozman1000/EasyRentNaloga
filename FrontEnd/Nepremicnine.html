@@ -84,8 +84,8 @@
       <div id="registerForm" style="display:none">
         <div class="form-group">
           <label class="form-label">Uporabniško ime</label>
-          <input type="text" class="form-input" id="preveriGamerTag" placeholder="Kako naj te kličemo?">
-          <p class="form-error-mt" id="napakaGamerTag"></p>
+          <input type="text" class="form-input" id="preveriUporabnisko" placeholder="Kako naj te kličemo?">
+          <p class="form-error-mt" id="napakaUporabnisko"></p>
         </div>
         <div class="form-group">
           <label class="form-label">E-pošta</label>
@@ -110,14 +110,73 @@
     </div>
   </div>
 
+  <!-- Modalni dialog za dodajanje nove nepremičnine (prijavljeni uporabniki) -->
+  <div class="modal-overlay" id="addPropertyModal" onclick="zapriDodajModalOutside(event)" style="display:none">
+    <div class="modal" style="width:560px;max-width:95vw">
+      <div class="modal-close" onclick="zapriDodajModal()">&#x2715;</div>
+      <div class="modal-header">
+        <div class="modal-title">Nova nepremičnina</div>
+        <div class="modal-sub">Dodaj svojo nepremičnino na Easy Rent</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Naziv nepremičnine</label>
+        <input type="text" class="form-input" id="npIme" placeholder="npr. Vila s pogledom na morje">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tip nepremičnine</label>
+        <select class="form-input" id="npTip">
+          <option value="">-- Nalagam tipe... --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Opis</label>
+        <textarea class="form-input" id="npOpis" rows="3" placeholder="Kratek opis nepremičnine..."></textarea>
+      </div>
+      <div style="display:flex;gap:1rem">
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Na voljo od</label>
+          <input type="date" class="form-input" id="npDatum">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Cena na noč (€)</label>
+          <input type="number" min="1" step="0.01" class="form-input" id="npCena" placeholder="npr. 85">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lokacija</label>
+        <input type="text" class="form-input" id="npLokacija" placeholder="npr. Bled, Slovenija">
+      </div>
+      <div style="display:flex;gap:1rem">
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Zemljepisna širina (Lat)</label>
+          <input type="text" class="form-input" id="npLat" placeholder="npr. 46.3683">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Zemljepisna dolžina (Lng)</label>
+          <input type="text" class="form-input" id="npLng" placeholder="npr. 14.1146">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Največje število gostov</label>
+        <input type="number" min="1" step="1" class="form-input" id="npMaxGostov" placeholder="npr. 4">
+      </div>
+      <p id="npNapaka" class="form-error"></p>
+      <button class="form-submit" onclick="oddajNovoNepremicnino()">DODAJ NEPREMIČNINO</button>
+    </div>
+  </div>
+
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Glavna vsebina strani -->
   <div class="page active" id="propertiesPage">
 
-    <div style="margin-bottom:1.5rem">
-      <h1 class="section-title" style="font-size:2rem;margin-bottom:0.5rem">Nepremičnine</h1>
-      <p style="color:var(--text-secondary);font-size:0.9rem">Prosta, kmalu prosta in trenutno zasedena bivališča za najem</p>
+    <div style="margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem">
+      <div>
+        <h1 class="section-title" style="font-size:2rem;margin-bottom:0.5rem">Nepremičnine</h1>
+        <p style="color:var(--text-secondary);font-size:0.9rem">Prosta, kmalu prosta in trenutno zasedena bivališča za najem</p>
+      </div>
+      <button class="btn-primary" id="addPropertyBtn" onclick="odpriDodajModal()">+ Dodaj nepremičnino</button>
     </div>
 
     <!-- Kratka predstavitev  -->
@@ -190,6 +249,7 @@
 <script>
 
 let properties = [];
+let tipiNepremicnin = [];
 let activeTypeFilter = 'all';
 let activeStatusFilter = 'all';
 
@@ -212,9 +272,9 @@ function applyPropertyFilters() {
     const q = (document.getElementById('propertySearch')?.value || '').toLowerCase();
 
     const list = properties.filter(p => {
-        const ime    = (p.Ime_turnirja || p.ime || "").toLowerCase();
+        const ime    = (p.Ime_nepremicnine || p.ime || "").toLowerCase();
         const kraj   = (p.Lokacija || p.lokacija || "").toLowerCase();
-        const tip    = (p.Naslov_igre || p.tip || "");
+        const tip    = (p.Tip || p.tip || "");
         const status = (p.Status || p.status || 'upcoming').toLowerCase();
 
         const matchSearch = ime.includes(q) || kraj.includes(q);
@@ -236,17 +296,17 @@ function renderProperties(list) {
     }
 
     grid.innerHTML = list.map(p => {
-        const zasedenostPct = Math.round((p.Prijavljene_ekipe / p.Max_ekip) * 100) || 0;
+        const zasedenostPct = Math.round((p.Trenutno_gostov / p.Max_gostov) * 100) || 0;
         const status = p.Status || 'upcoming';
         const statusLabel = status.toLowerCase() === 'live' ? 'Prosto' : status.toLowerCase() === 'completed' ? 'Zasedeno' : 'Kmalu prosto';
 
         return `
-        <div class="tournament-card" onclick="openProperty(${p.ID_Turnir})">
+        <div class="property-card" onclick="openProperty(${p.ID_Nepremicnina})">
             <div class="t-card-header">
                 <div class="t-status ${status.toLowerCase()}">${statusLabel}</div>
-                <div class="t-name">${p.Ime_turnirja}</div>
-                <span class="t-game" style="background:var(--bg-elevated); color:var(--accent-cyan)">
-                    ${p.Naslov_igre || 'Nepremičnina'}
+                <div class="t-name">${p.Ime_nepremicnine}</div>
+                <span class="t-type" style="background:var(--bg-elevated); color:var(--accent-cyan)">
+                    ${p.Tip || 'Nepremičnina'}
                 </span>
             </div>
             <div class="t-meta">
@@ -254,12 +314,12 @@ function renderProperties(list) {
                 <div class="t-meta-row"><span class="t-meta-key">Lokacija</span><span class="t-meta-value">${p.Lokacija}</span></div>
             </div>
             <div class="t-progress">
-                <div class="t-progress-label"><span>Zasedenost gostov</span><span>${p.Prijavljene_ekipe} / ${p.Max_ekip}</span></div>
+                <div class="t-progress-label"><span>Zasedenost gostov</span><span>${p.Trenutno_gostov} / ${p.Max_gostov}</span></div>
                 <div class="bar-track"><div class="bar-fill" style="width:${zasedenostPct}%"></div></div>
             </div>
             <div class="t-footer">
-                <div><div class="t-prize-label">Cena na noč</div><div class="t-prize">${p.Nagradni_sklad} €</div></div>
-                <button class="btn-primary" onclick="event.stopPropagation(); rezervirajNepremicnino(${p.ID_Turnir})">Rezerviraj</button>
+                <div><div class="t-price-label">Cena na noč</div><div class="t-price">${p.Cena_na_noc} €</div></div>
+                <button class="btn-primary" onclick="event.stopPropagation(); rezervirajNepremicnino(${p.ID_Nepremicnina})">Rezerviraj</button>
             </div>
         </div>`;
     }).join('');
@@ -267,26 +327,26 @@ function renderProperties(list) {
 
 // podrobnosti + zemljevid 
 function openProperty(id) {
-    const p = properties.find(x => x.ID_Turnir === id);
+    const p = properties.find(x => x.ID_Nepremicnina === id);
     if (!p) return;
 
     document.getElementById('propertyModalContent').innerHTML = `
         <div class="t-modal-header">
             <div class="t-status ${(p.Status || 'upcoming').toLowerCase()}">${p.Status || 'Kmalu prosto'}</div>
-            <div class="t-modal-name">${p.Ime_turnirja}</div>
+            <div class="t-modal-name">${p.Ime_nepremicnine}</div>
         </div>
-        <p>Tip: ${p.Naslov_igre || 'Nepremičnina'}</p>
+        <p>Tip: ${p.Tip || 'Nepremičnina'}</p>
         <p>Lokacija: ${p.Lokacija}</p>
-        <p>Cena: ${p.Nagradni_sklad} € / noč</p>
+        <p>Cena: ${p.Cena_na_noc} € / noč</p>
         <div style="margin-top: 1rem;">
-            <button class="btn-primary" style="width:100%" onclick="rezervirajNepremicnino(${p.ID_Turnir})">Rezerviraj bivanje</button>
+            <button class="btn-primary" style="width:100%" onclick="rezervirajNepremicnino(${p.ID_Nepremicnina})">Rezerviraj bivanje</button>
         </div>
     `;
     document.getElementById('propertyModal').style.display = 'flex';
 
     // Zemljevid se posodobi samo, če je uporabnik prijavljen 
     if (localStorage.getItem('token')) {
-        updateMap(p.Lat, p.Lng, p.Ime_turnirja);
+        updateMap(p.Lat, p.Lng, p.Ime_nepremicnine);
     }
 }
 
@@ -334,7 +394,7 @@ function preveriDostopDoZemljevida() {
 
 // rezervacija 
 async function rezervirajNepremicnino(id) {
-    const p = properties.find(x => x.ID_Turnir === id);
+    const p = properties.find(x => x.ID_Nepremicnina === id);
     if (!p) return;
 
     const token = localStorage.getItem('token');
@@ -356,9 +416,17 @@ async function rezervirajNepremicnino(id) {
         const data = await res.json();
 
         if (res.ok && data.success) {
-            showToast(data.message || `Rezervacija za "${p.Ime_turnirja}" je bila uspešno oddana!`);
+            showToast(data.message || `Rezervacija za "${p.Ime_nepremicnine}" je bila uspešno oddana!`);
             document.getElementById('propertyModal').style.display = 'none';
             fetchPropertiesFromDB(); // osveži seznam, da se posodobi zasedenost
+        } else if (res.status === 401) {
+            // Žeton ni več veljaven (npr. račun je bil medtem izbrisan) — počisti sejo in ponovno prijavi
+            localStorage.removeItem('token');
+            localStorage.removeItem('vloga');
+            localStorage.removeItem('username');
+            preveriPrijavo();
+            showToast(data.error || 'Seja je potekla. Prosim, ponovno se prijavi.');
+            openModal('login');
         } else {
             showToast(data.error || 'Rezervacija ni uspela.');
         }
@@ -376,6 +444,113 @@ function showToast(msg) {
     t.innerHTML = `<div>${msg}</div>`;
     c.appendChild(t);
     setTimeout(() => t.remove(), 3500);
+}
+
+/* ── Dodajanje nove nepremičnine */
+
+// Naloži tipe nepremičnin iz baze in napolni <select> v modalu za dodajanje
+async function naloziTipeNepremicnin() {
+    const sel = document.getElementById('npTip');
+    try {
+        const res = await fetch('/api/tipi-nepremicnin');
+        const data = await res.json();
+        tipiNepremicnin = Array.isArray(data) ? data : [];
+        if (!sel) return;
+        sel.innerHTML = tipiNepremicnin.length
+            ? tipiNepremicnin.map(t => `<option value="${t.id}">${t.naziv} — ${t.zanr}</option>`).join('')
+            : '<option value="">Ni razpoložljivih tipov</option>';
+    } catch (err) {
+        console.error('Napaka pri nalaganju tipov nepremičnin:', err);
+        if (sel) sel.innerHTML = '<option value="">Napaka pri nalaganju tipov</option>';
+    }
+}
+
+function posodobiGumbDodaj() {
+    const btn = document.getElementById('addPropertyBtn');
+    if (!btn) return;
+    // Gumb je viden vsem, a neprijavljene uporabnike ob kliku preusmerimo na prijavo (glej odpriDodajModal)
+    btn.style.display = 'inline-block';
+}
+
+function odpriDodajModal() {
+    if (!localStorage.getItem('token')) {
+        showToast('Za dodajanje nepremičnine se moraš najprej prijaviti.');
+        openModal('login');
+        return;
+    }
+    document.getElementById('npNapaka').textContent = '';
+    document.getElementById('addPropertyModal').style.display = 'flex';
+    if (!tipiNepremicnin.length) naloziTipeNepremicnin();
+}
+
+function zapriDodajModal() {
+    document.getElementById('addPropertyModal').style.display = 'none';
+}
+
+function zapriDodajModalOutside(e) {
+    if (e.target.id === 'addPropertyModal') zapriDodajModal();
+}
+
+async function oddajNovoNepremicnino() {
+    const napaka = document.getElementById('npNapaka');
+    napaka.textContent = '';
+
+    const Ime_nepremicnine    = document.getElementById('npIme').value.trim();
+    const TK_Tip_nepremicnine = document.getElementById('npTip').value;
+    const Opis                = document.getElementById('npOpis').value.trim();
+    const Datum               = document.getElementById('npDatum').value;
+    const Cena_na_noc         = document.getElementById('npCena').value;
+    const Lokacija            = document.getElementById('npLokacija').value.trim();
+    const Lat                 = document.getElementById('npLat').value.trim();
+    const Lng                 = document.getElementById('npLng').value.trim();
+    const Max_gostov          = document.getElementById('npMaxGostov').value;
+
+    if (!Ime_nepremicnine || !TK_Tip_nepremicnine || !Datum || !Lokacija || !Max_gostov || !Cena_na_noc) {
+        napaka.textContent = 'Prosim izpolni vsa obvezna polja (naziv, tip, datum, lokacija, kapaciteta, cena).';
+        return;
+    }
+    if (parseFloat(Cena_na_noc) <= 0 || parseInt(Max_gostov) <= 0) {
+        napaka.textContent = 'Cena in kapaciteta morata biti večji od 0.';
+        return;
+    }
+
+    const gumb = document.querySelector('#addPropertyModal .form-submit');
+    if (gumb) { gumb.textContent = 'Dodajam...'; gumb.disabled = true; }
+
+    const token = localStorage.getItem('token');
+    try {
+        const res = await fetch('/api/nepremicnine', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                Ime_nepremicnine, TK_Tip_nepremicnine, Opis, Datum, Lokacija,
+                Lat: Lat || '0', Lng: Lng || '0',
+                Max_gostov, Cena_na_noc
+            })
+        });
+        const data = await res.json();
+
+        if (gumb) { gumb.textContent = 'DODAJ NEPREMIČNINO'; gumb.disabled = false; }
+
+        if (res.ok) {
+            showToast('Nepremičnina uspešno dodana! 🏠');
+            zapriDodajModal();
+            ['npIme','npOpis','npDatum','npCena','npLokacija','npLat','npLng','npMaxGostov'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            fetchPropertiesFromDB();
+        } else {
+            napaka.textContent = data.error || 'Napaka pri dodajanju nepremičnine.';
+        }
+    } catch (err) {
+        if (gumb) { gumb.textContent = 'DODAJ NEPREMIČNINO'; gumb.disabled = false; }
+        console.error('Napaka pri dodajanju nepremičnine:', err);
+        napaka.textContent = 'Napaka pri povezavi s strežnikom.';
+    }
 }
 
 /* modal  */
@@ -405,6 +580,7 @@ function preveriPrijavo() {
     const ab = document.getElementById('authButtons');
     const um = document.getElementById('userMenu');
     const av = document.getElementById('userAvatar');
+    posodobiGumbDodaj();
     if (!username) {
         if (ab) ab.style.display = 'flex';
         if (um) um.style.display = 'none';
@@ -479,6 +655,7 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchPropertiesFromDB();
+    naloziTipeNepremicnin();
     preveriDostopDoZemljevida();
     preveriPrijavo();
     loadNotifications();

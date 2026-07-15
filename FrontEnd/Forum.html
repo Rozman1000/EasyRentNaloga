@@ -87,8 +87,8 @@
       <div id="registerForm" style="display:none">
         <div class="form-group">
           <label class="form-label">Uporabniško ime</label>
-          <input type="text" class="form-input" id="preveriGamerTag" placeholder="Kako naj te kličemo?">
-          <p style="display: none;" id="napakaGamerTag"></p>
+          <input type="text" class="form-input" id="preveriUporabnisko" placeholder="Kako naj te kličemo?">
+          <p style="display: none;" id="napakaUporabnisko"></p>
         </div>
         <div class="form-group">
           <label class="form-label">E-pošta</label>
@@ -200,7 +200,7 @@
 <script>
 
   // Prikazni podatki (ikona/ime/barva) za vsako kategorijo — samo oznake za
-  // UI, resnične številke objav pridejo iz API-ja.
+
   const KATEGORIJE_PRIKAZ = {
     splosno:     { icon:'S', name:'Splošno',      color:'var(--accent-green)',  bg:'var(--bg-elevated)' },
     najemi:      { icon:'N', name:'Najemi',       color:'var(--accent-cyan)',   bg:'var(--bg-elevated)' },
@@ -400,7 +400,7 @@
 
   /*
    Validira vnosna polja modalnega obrazca in objavo shrani v bazo
-   (POST /api/forum), nato osveži seznam objav.
+   , nato osveži seznam objav.
    */
   async function submitPost() {
     const title  = document.getElementById('postTitle').value.trim();
@@ -493,7 +493,7 @@
     if (um) um.style.display = 'flex';
     if (av) av.textContent   = username.substring(0,2).toUpperCase();
   })();
-  /* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+  /* obvestila  */
   let obvestilaCache = [];
 
   async function loadNotifications() {

@@ -83,8 +83,8 @@
       <div id="registerForm" style="display:none">
         <div class="form-group">
           <label class="form-label">Uporabniško ime</label>
-          <input type="text" class="form-input" placeholder="Kako naj te kličemo?" id="preveriGamerTag">
-          <p class="form-error-mt" id="napakaGamerTag"></p>
+          <input type="text" class="form-input" placeholder="Kako naj te kličemo?" id="preveriUporabnisko">
+          <p class="form-error-mt" id="napakaUporabnisko"></p>
         </div>
         <div class="form-group">
           <label class="form-label">E-pošta</label>
@@ -123,13 +123,13 @@
       <div class="section-title"><span>Trenutno</span> na voljo</div>
       <div class="section-link" onclick="window.location='nepremicnine.html'">Vse nepremičnine →</div>
     </div>
-    <div class="cards-grid" id="liveTournaments"></div>
+    <div class="cards-grid" id="liveProperties"></div>
 
     <div class="section-header">
       <div class="section-title">Kmalu <span>prosto</span></div>
       <div class="section-link" onclick="window.location='nepremicnine.html'">Prikaži vse →</div>
     </div>
-    <div class="cards-grid" id="upcomingTournaments"></div>
+    <div class="cards-grid" id="upcomingProperties"></div>
 
     <!-- Povabilo v skupnost namesto podvajanja forumskih objav (te že živijo na forum.html) -->
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;margin-top:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
@@ -213,8 +213,8 @@
       const proste = data.filter(p => (p.Status || '').toLowerCase() === 'live').slice(0, 3);
       const kmalu  = data.filter(p => (p.Status || '').toLowerCase() === 'upcoming').slice(0, 3);
 
-      document.getElementById('liveTournaments').innerHTML     = renderCards(proste)  || prazniOpis('Trenutno ni prostih nepremičnin.');
-      document.getElementById('upcomingTournaments').innerHTML = renderCards(kmalu)   || prazniOpis('Trenutno ni napovedanih objav.');
+      document.getElementById('liveProperties').innerHTML     = renderCards(proste)  || prazniOpis('Trenutno ni prostih nepremičnin.');
+      document.getElementById('upcomingProperties').innerHTML = renderCards(kmalu)   || prazniOpis('Trenutno ni napovedanih objav.');
     } catch (err) {
       console.error('Napaka pri nalaganju nepremičnin za domačo stran:', err);
     }
@@ -222,17 +222,17 @@
 
   function renderCards(list) {
     return list.map(p => `
-      <div class="tournament-card" onclick="window.location='nepremicnine.html'">
+      <div class="property-card" onclick="window.location='nepremicnine.html'">
         <div class="t-card-header">
           <div class="t-status ${(p.Status||'upcoming').toLowerCase()}">${p.Status || 'Kmalu prosto'}</div>
-          <div class="t-name">${p.Ime_turnirja}</div>
-          <span class="t-game" style="background:var(--bg-elevated);color:var(--accent-cyan)">${p.Naslov_igre || 'Nepremičnina'}</span>
+          <div class="t-name">${p.Ime_nepremicnine}</div>
+          <span class="t-type" style="background:var(--bg-elevated);color:var(--accent-cyan)">${p.Tip || 'Nepremičnina'}</span>
         </div>
         <div class="t-meta">
           <div class="t-meta-row"><span class="t-meta-key">Lokacija</span><span class="t-meta-value">${p.Lokacija}</span></div>
         </div>
         <div class="t-footer">
-          <div><div class="t-prize-label">Cena na noč</div><div class="t-prize">${p.Nagradni_sklad} €</div></div>
+          <div><div class="t-price-label">Cena na noč</div><div class="t-price">${p.Cena_na_noc} €</div></div>
         </div>
       </div>`).join('');
   }

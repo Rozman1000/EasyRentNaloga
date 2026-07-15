@@ -1,5 +1,3 @@
-
-
 function doLogin() {
     const emailEl = document.getElementById("loginUser");
     const gesloEl = document.getElementById("loginPass");
@@ -40,7 +38,7 @@ function podatkiNaServerLogin(email, geslo, gumb) {
     .then(function(data) {
         // Ponastavi gumb
         if (gumb) {
-            gumb.textContent = "VSTOPI V ARENO →";
+            gumb.textContent = "PRIJAVA";
             gumb.disabled    = false;
         }
 
@@ -55,7 +53,7 @@ function podatkiNaServerLogin(email, geslo, gumb) {
     })
     .catch(function() {
         if (gumb) {
-            gumb.textContent = "VSTOPI V ARENO →";
+            gumb.textContent = "PRIJAVA";
             gumb.disabled    = false;
         }
         prikaziLoginNapako("Napaka pri povezavi s strežnikom. Ali strežnik deluje?");
@@ -145,7 +143,7 @@ function podatkiNaServerLogin(email, geslo, gumb) {
     .then(function(data) {
         // Ponastavi gumb
         if (gumb) {
-            gumb.textContent = "VSTOPI V ARENO →";
+            gumb.textContent = "PRIJAVA";
             gumb.disabled    = false;
         }
 
@@ -160,7 +158,7 @@ function podatkiNaServerLogin(email, geslo, gumb) {
     })
     .catch(function() {
         if (gumb) {
-            gumb.textContent = "VSTOPI V ARENO →";
+            gumb.textContent = "PRIJAVA";
             gumb.disabled    = false;
         }
         prikaziLoginNapako("Napaka pri povezavi s strežnikom. Ali strežnik deluje?");

@@ -76,10 +76,10 @@
         <div class="profil-meta" id="profilMeta">Nalaganje...</div>
       </div>
       <div class="profil-stats">
-        <div class="pstat"><div class="pstat-val" style="color:var(--accent-cyan)"  id="pWins">--</div><div class="pstat-key">Najemov</div></div>
-        <div class="pstat"><div class="pstat-val" style="color:var(--accent-green)" id="pTournaments">--</div><div class="pstat-key">Rezervacije</div></div>
-        <div class="pstat"><div class="pstat-val" style="color:var(--accent-purple)"id="pPoints">--</div><div class="pstat-key">Točke</div></div>
-        <div class="pstat"><div class="pstat-val" style="color:var(--accent-orange)"id="pRewards">--</div><div class="pstat-key">Nagrade</div></div>
+        <div class="pstat"><div class="pstat-val" style="color:var(--accent-cyan)"  id="pNajemov">--</div><div class="pstat-key">Najemov</div></div>
+        <div class="pstat"><div class="pstat-val" style="color:var(--accent-green)" id="pRezervacije">--</div><div class="pstat-key">Rezervacije</div></div>
+        <div class="pstat"><div class="pstat-val" style="color:var(--accent-purple)"id="pTocke">--</div><div class="pstat-key">Točke</div></div>
+        <div class="pstat"><div class="pstat-val" style="color:var(--accent-orange)"id="pPopusti">--</div><div class="pstat-key">Nagrade</div></div>
       </div>
     </div>
 
@@ -118,7 +118,7 @@
         <div class="edit-grid" style="margin-bottom:1rem">
           <div class="form-group" style="margin:0">
             <label class="form-label">Nepremičnina</label>
-            <select class="form-input" id="feedbackTurnir">
+            <select class="form-input" id="feedbackNepremicnina">
               <option value="">-- Izberi nepremičnino --</option>
             </select>
           </div>
@@ -173,7 +173,7 @@
           </div>
           <div class="form-group" style="margin:0">
             <label class="form-label">Preferenca nastanitve</label>
-            <select class="form-input" id="editIgra">
+            <select class="form-input" id="editPreferenca">
               <option value="">-- Vseeno --</option>
               <option>Hiša</option>
               <option>Apartma</option>
@@ -275,24 +275,24 @@ async function naloziProfilPodatke() {
     document.getElementById('profilAvatarEl').textContent  = d.username.substring(0,2).toUpperCase();
     document.getElementById('profilUsername').textContent  = d.username;
     document.getElementById('profilRole').textContent      = (d.vloga || 'najemnik').toUpperCase() + ' · ' + (d.email || '');
-    document.getElementById('pWins').textContent           = d.zmage ?? 0;
-    document.getElementById('pTournaments').textContent    = d.turnirji ?? 0;
-    document.getElementById('pPoints').textContent         = d.tocke ?? 0;
-    document.getElementById('pRewards').textContent        = d.nagrade ?? 0;
+    document.getElementById('pNajemov').textContent        = d.zakljuceni_najemi ?? 0;
+    document.getElementById('pRezervacije').textContent    = d.stevilo_rezervacij ?? 0;
+    document.getElementById('pTocke').textContent          = d.tocke ?? 0;
+    document.getElementById('pPopusti').textContent        = d.popusti ?? 0;
     document.getElementById('profilMeta').textContent      = 'Registriran: ' + (d.datum_registracije ? new Date(d.datum_registracije).toLocaleDateString('sl-SI') : '--') + (d.drzava ? '  🌍 ' + d.drzava : '');
 
     // znacke
     const badges = [];
-    if ((d.zmage ?? 0) >= 10) badges.push('<span class="badge badge-pro">TOP NAJEMNIK</span>');
-    if ((d.zmage ?? 0) >= 5)  badges.push('<span class="badge badge-mvp">ZANESLJIV</span>');
-    if ((d.turnirji ?? 0) >= 3) badges.push('<span class="badge badge-veteran">Izkušen</span>');
+    if ((d.zakljuceni_najemi ?? 0) >= 10) badges.push('<span class="badge badge-top">TOP NAJEMNIK</span>');
+    if ((d.zakljuceni_najemi ?? 0) >= 5)  badges.push('<span class="badge badge-reliable">ZANESLJIV</span>');
+    if ((d.stevilo_rezervacij ?? 0) >= 3) badges.push('<span class="badge badge-experienced">Izkušen</span>');
     document.getElementById('profilBadges').innerHTML = badges.join('');
 
     // Predpolni uredi obrazec
     document.getElementById('editUsername').value = d.username || '';
     document.getElementById('editEmail').value    = d.email    || '';
     document.getElementById('editDrzava').value   = d.drzava   || '';
-    if (d.najljubsa_igra) document.getElementById('editIgra').value = d.najljubsa_igra;
+    if (d.preferenca_nastanitve) document.getElementById('editPreferenca').value = d.preferenca_nastanitve;
 
   } catch {
     // prikazi kaj je v localstorage
@@ -303,7 +303,7 @@ async function naloziProfilPodatke() {
     document.getElementById('profilMeta').textContent     = 'Ni podatkov s strežnika';
     document.getElementById('editUsername').value         = u;
     // Nastavi prazne statistike
-    ['pWins','pTournaments','pPoints','pRewards'].forEach(id => {
+    ['pNajemov','pRezervacije','pTocke','pPopusti'].forEach(id => {
       document.getElementById(id).textContent = '0';
     });
   }
@@ -317,23 +317,23 @@ async function naloziNajeme() {
       headers: { 'Authorization': 'Bearer ' + trenutniUser.token }
     });
     if (!res.ok) throw new Error();
-    const tekme = await res.json();
+    const zakljuceniNajemi = await res.json();
 
-    if (!tekme.length) {
+    if (!zakljuceniNajemi.length) {
       el.innerHTML = '<div class="table-loading">Še nimate zaključenih najemov.</div>';
       return;
     }
 
-    el.innerHTML = tekme.map(t => {
-      const cena  = t.rezultat || (t.tocke_ekip !== undefined ? t.tocke_ekip : t.cena) || '--';
+    el.innerHTML = zakljuceniNajemi.map(t => {
+      const cena = t.Cena_na_noc || '--';
       return `
         <div class="match-card">
           <div class="match-result-badge match-win">
             <div style="font-size:0.9rem;font-weight:900">✓</div>
           </div>
           <div class="match-card-info">
-            <div class="match-title">Najem — ${t.ime_turnirja || t.turnir || '--'}</div>
-            <div class="match-sub">${t.igra || '--'} · ${t.lokacija || t.nasprotnik || t.ekipa || '--'}</div>
+            <div class="match-title">Najem — ${t.Ime_nepremicnine || '--'}</div>
+            <div class="match-sub">${t.tip || '--'} · ${t.lokacija || '--'}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.25rem">
             <div class="match-card-score" style="color:#3f8f5f">${cena} €</div>
@@ -362,17 +362,16 @@ async function naloziRezervacijeUporabnika() {
     }
     el.innerHTML = lista.map(t => {
       const statusColor = t.status === 'live' ? 'var(--accent-green)' : t.status === 'upcoming' ? 'var(--accent-cyan)' : 'var(--text-muted)';
-      const nagrada     = t.uvrstitev ? nagradeHtml(t.uvrstitev) : '';
       return `
-        <div class="match-card">
+        <div class="match-card" id="rez-card-${t.id_rezervacije}">
           <div style="width:48px;height:48px;border-radius:12px;background:var(--bg-elevated);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">🏠</div>
           <div class="match-card-info">
-            <div class="match-title">${t.ime_turnirja || '--'}</div>
-            <div class="match-sub">${t.igra || '--'} · ${t.lokacija || '--'} · ${t.datum ? new Date(t.datum).toLocaleDateString('sl-SI') : '--'}</div>
+            <div class="match-title">${t.Ime_nepremicnine || '--'}</div>
+            <div class="match-sub">${t.tip || '--'} · ${t.lokacija || '--'} · ${t.datum ? new Date(t.datum).toLocaleDateString('sl-SI') : '--'}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.35rem">
             <span style="font-size:0.78rem;font-weight:700;color:${statusColor};text-transform:uppercase">${t.status || '--'}</span>
-            ${nagrada}
+            <button class="action-btn btn-red" id="rez-cancel-${t.id_rezervacije}" onclick="odjaviRezervacijo(${t.id_rezervacije})">✕ Odjavi rezervacijo</button>
           </div>
         </div>`;
     }).join('');
@@ -381,11 +380,36 @@ async function naloziRezervacijeUporabnika() {
   }
 }
 
-function nagradeHtml(uvrstitev) {
-  if (uvrstitev === 1) return '<span class="reward-badge reward-gold">🥇 1. mesto</span>';
-  if (uvrstitev === 2) return '<span class="reward-badge reward-silver">🥈 2. mesto</span>';
-  if (uvrstitev === 3) return '<span class="reward-badge reward-bronze">🥉 3. mesto</span>';
-  return `<span class="reward-badge">${uvrstitev}. mesto</span>`;
+// Odjava (preklic) rezervacije s strani uporabnika
+async function odjaviRezervacijo(idRezervacije) {
+  if (!confirm('Res želiš odjaviti to rezervacijo?')) return;
+
+  const btn = document.getElementById('rez-cancel-' + idRezervacije);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    const res = await fetch(API + '/api/rezervacija/' + idRezervacije, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + trenutniUser.token }
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.success) {
+      showToast(data.message || 'Rezervacija odjavljena.', 'ok');
+      const card = document.getElementById('rez-card-' + idRezervacije);
+      if (card) card.remove();
+      naloziRezervacijeUporabnika();
+      naloziProfilPodatke();
+      naloziObvestila();
+    } else {
+      showToast(data.error || 'Napaka pri odjavi rezervacije.', 'err');
+      if (btn) { btn.disabled = false; btn.textContent = '✕ Odjavi rezervacijo'; }
+    }
+  } catch (err) {
+    console.error('Napaka pri odjavi rezervacije:', err);
+    showToast('Napaka pri povezavi s strežnikom.', 'err');
+    if (btn) { btn.disabled = false; btn.textContent = '✕ Odjavi rezervacijo'; }
+  }
 }
 
 /* feedback */
@@ -393,12 +417,12 @@ async function naloziNepremicnineZaFeedback() {
   try {
     const res  = await fetch(API + '/api/nepremicnine');
     const data = await res.json();
-    const sel  = document.getElementById('feedbackTurnir');
+    const sel  = document.getElementById('feedbackNepremicnina');
     if (Array.isArray(data)) {
       data.forEach(t => {
         const opt = document.createElement('option');
-        opt.value = t.ID_Turnir || t.id;
-        opt.textContent = t.Ime_turnirja || t.ime_turnirja || t.ime || ('Nepremičnina #' + (t.ID_Turnir || t.id));
+        opt.value = t.ID_Nepremicnina || t.id;
+        opt.textContent = t.Ime_nepremicnine || t.Ime_nepremicnine || t.ime || ('Nepremičnina #' + (t.ID_Nepremicnina || t.id));
         sel.appendChild(opt);
       });
     }
@@ -424,7 +448,7 @@ async function naloziMojFeedback() {
     el.innerHTML = lista.map(f => `
       <div class="feedback-card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
-          <div style="font-weight:700">${f.ime_turnirja || 'Nepremičnina #' + f.TK_Forum}</div>
+          <div style="font-weight:700">${f.Ime_nepremicnine || 'Nepremičnina #' + f.TK_Forum}</div>
           <div class="stars">${'★'.repeat(f.Ocena || f.ocena)}${'☆'.repeat(5 - (f.Ocena || f.ocena))}</div>
         </div>
         <div style="color:var(--text-secondary);font-size:0.88rem">${f.Besedilo || f.besedilo || ''}</div>
@@ -443,7 +467,7 @@ function setStars(n) {
 }
 
 async function oddajFeedback() {
-  const nepremicninaId = document.getElementById('feedbackTurnir').value;
+  const nepremicninaId = document.getElementById('feedbackNepremicnina').value;
   const besedilo   = document.getElementById('feedbackBesedilo').value.trim();
   const ocena      = izbranaZvezdica;
 
@@ -458,7 +482,7 @@ async function oddajFeedback() {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + trenutniUser.token
       },
-      body: JSON.stringify({ TK_Turnir: nepremicninaId, Besedilo: besedilo, Ocena: ocena })
+      body: JSON.stringify({ TK_Nepremicnina: nepremicninaId, Besedilo: besedilo, Ocena: ocena })
     });
     const data = await res.json();
     if (res.ok) {
@@ -466,7 +490,7 @@ async function oddajFeedback() {
       document.getElementById('feedbackBesedilo').value = '';
       izbranaZvezdica = 0;
       setStars(0);
-      document.getElementById('feedbackTurnir').value = '';
+      document.getElementById('feedbackNepremicnina').value = '';
       naloziMojFeedback();
     } else {
       showToast(data.error || 'Napaka pri oddaji.', 'err');
@@ -517,7 +541,7 @@ async function preberiObvestilo(id) {
     });
     userObvestila = userObvestila.map(o => (o.ID_Obvestila || o.id) === id ? { ...o, prebrano: true } : o);
     renderObvestila();
-  } catch { /* tiho */ }
+  } catch { /* nic se ne zgodi */ }
 }
 
 function preberiVsaObvestila() {
@@ -530,7 +554,7 @@ async function shranijProfil() {
     Username: document.getElementById('editUsername').value.trim(),
     Email:    document.getElementById('editEmail').value.trim(),
     Drzava:   document.getElementById('editDrzava').value.trim(),
-    Igra:     document.getElementById('editIgra').value
+    Preferenca: document.getElementById('editPreferenca').value
   };
 
   if (!body.Username || !body.Email) { showToast('Ime in email sta obvezna!', 'warn'); return; }

@@ -1,21 +1,20 @@
-
 const StatsEngine = (() => {
 
 
   function computeRanking(properties) {
     return [...properties]
       .map(p => {
-        const gostje = parseInt(p.Prijavljene_ekipe) || 0;
-        const maxGostje = parseInt(p.Max_ekip) || 1;
+        const gostje = parseInt(p.Trenutno_gostov) || 0;
+        const maxGostje = parseInt(p.Max_gostov) || 1;
         return {
-          id: p.ID_Turnir,
-          ime: p.Ime_turnirja,
-          tip: p.Naslov_igre || 'Nepremičnina',
+          id: p.ID_Nepremicnina,
+          ime: p.Ime_nepremicnine,
+          tip: p.Tip || 'Nepremičnina',
           lokacija: p.Lokacija,
           gostje,
           maxGostje,
           zasedenostPct: Math.min(100, Math.round((gostje / maxGostje) * 100)),
-          cena: p.Nagradni_sklad,
+          cena: p.Cena_na_noc,
         };
       })
       .sort((a, b) => b.gostje - a.gostje)
@@ -23,8 +22,7 @@ const StatsEngine = (() => {
   }
 
   /**
-   * renderRankingList(containerId, ranked)
-   * Izriše rang lestvico kot vodoravne stolpce (najbolj priljubljene na vrhu).
+  Izriše rang lestvico kot vodoravne stolpce (najbolj priljubljene na vrhu).
    */
   function renderRankingList(containerId, ranked) {
     const el = document.getElementById(containerId);

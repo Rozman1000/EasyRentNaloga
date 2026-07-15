@@ -1,4 +1,3 @@
-
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
@@ -39,7 +38,7 @@ const FORUM_KATEGORIJE = ['splosno', 'najemi', 'nasveti', 'vzdrzevanje', 'sosedj
 // Glavni del Middleware
 
 // Preveri JWT token iz Authorization headerja
-function preveriToken(req, res, next) {
+async function preveriToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Format: "Bearer <token>"
 
@@ -47,10 +46,31 @@ function preveriToken(req, res, next) {
         return res.status(401).json({ error: 'Za to akcijo morate biti prijavljeni.' });
     }
 
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, JWT_SECRET, async (err, decoded) => {
         if (err) {
             return res.status(403).json({ error: 'Neveljaven ali potekel žeton.' });
         }
+
+        // Žeton je veljaven, a uporabnik je lahko medtem izbrisan iz baze (npr. po
+        // ponovnem sejanju baze ali brisanju računa) — brez tega preverjanja bi
+        // vsak nadaljnji klic (rezervacija, forum, profil ...) padel s kršitvijo
+        // tujega ključa namesto z jasnim sporočilom.
+        try {
+            const uporabnikQ = await pool.query(
+                'SELECT "Vloga" FROM "Uporabnik" WHERE "ID_Uporabnik" = $1',
+                [decoded.id]
+            );
+            if (uporabnikQ.rows.length === 0) {
+                return res.status(401).json({ error: 'Tvoj račun ne obstaja več. Prosim, odjavi se in se ponovno prijavi.' });
+            }
+            if (uporabnikQ.rows[0].Vloga === 'blokiran') {
+                return res.status(403).json({ error: 'Tvoj račun je blokiran.' });
+            }
+        } catch (dbErr) {
+            console.error('Napaka pri preverjanju uporabnika iz žetona:', dbErr);
+            return res.status(500).json({ error: 'Napaka na strežniku pri preverjanju prijave.' });
+        }
+
         req.uporabnik = decoded; // { id, username, vloga }
         next();
     });
@@ -189,19 +209,22 @@ app.get('/api/nepremicnine', async (req, res) => {
     try {
         const query = `
             SELECT 
-                n."ID_Nepremicnina"  AS "ID_Turnir",
-                n."Ime_nepremicnine" AS "Ime_turnirja",
+                n."ID_Nepremicnina",
+                n."Ime_nepremicnine",
                 n."Datum",
                 n."Lokacija",
-                n."Cena_na_noc"      AS "Nagradni_sklad",
-                n."Max_gostov"       AS "Max_ekip",
-                n."Trenutno_gostov"  AS "Prijavljene_ekipe",
+                n."Cena_na_noc",
+                n."Max_gostov",
+                n."Trenutno_gostov",
                 n."Lat",
                 n."Lng",
                 n."Status",
-                tn."Naziv"           AS "Naslov_igre"
+                n."TK_Uporabnik",
+                tn."Naziv"           AS "Tip",
+                g."Username"         AS "Lastnik"
             FROM "Nepremicnine" n
             JOIN "Tip_nepremicnine" tn ON n."TK_Tip_nepremicnine" = tn."ID_Tip_nepremicnine"
+            LEFT JOIN "Uporabnik" g ON n."TK_Uporabnik" = g."ID_Uporabnik"
             ORDER BY n."ID_Nepremicnina" ASC
         `;
         const result = await pool.query(query);
@@ -221,14 +244,14 @@ app.get('/api/nepremicnine/:id', async (req, res) => {
     try {
         const { rows } = await pool.query(`
             SELECT 
-                n."ID_Nepremicnina"  AS "ID_Turnir",
-                n."Ime_nepremicnine" AS "Ime_turnirja",
+                n."ID_Nepremicnina",
+                n."Ime_nepremicnine",
                 n."Opis", n."Datum", n."Lokacija",
                 n."Status", n."Lat", n."Lng",
-                n."Max_gostov"       AS "Max_ekip",
-                n."Trenutno_gostov"  AS "Prijavljene_ekipe",
-                n."Cena_na_noc"      AS "Nagradni_sklad",
-                tn."Naziv"           AS "Naslov_igre",
+                n."Max_gostov",
+                n."Trenutno_gostov",
+                n."Cena_na_noc",
+                tn."Naziv"           AS "Tip",
                 g."Username"         AS "lastnik"
             FROM "Nepremicnine" n
             JOIN "Tip_nepremicnine" tn ON n."TK_Tip_nepremicnine" = tn."ID_Tip_nepremicnine"
@@ -246,14 +269,33 @@ app.get('/api/nepremicnine/:id', async (req, res) => {
     }
 });
 
+// GET /api/tipi-nepremicnin — seznam tipov nepremičnin (javno, za dropdown pri dodajanju)
+app.get('/api/tipi-nepremicnin', async (req, res) => {
+    try {
+        const { rows } = await pool.query(`
+            SELECT 
+                "ID_Tip_nepremicnine" AS id,
+                "Naziv"               AS naziv,
+                "Zanr"                AS zanr,
+                "Podtip"              AS podtip
+            FROM "Tip_nepremicnine"
+            ORDER BY "ID_Tip_nepremicnine" ASC
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error('Napaka pri pridobivanju tipov nepremičnin:', err);
+        res.status(500).json({ error: 'Napaka na strežniku.' });
+    }
+});
+
 // POST /api/nepremicnine — dodaj novo nepremičnino (prijavljeni uporabnik = lastnik)
 app.post('/api/nepremicnine', preveriToken, async (req, res) => {
     const {
-        Ime_turnirja, TK_Igra, TK_Pogoji_najema,
-        Opis, Datum, Lokacija, Lat, Lng, Max_ekip, Nagradni_sklad
+        Ime_nepremicnine, TK_Tip_nepremicnine, TK_Pogoji_najema,
+        Opis, Datum, Lokacija, Lat, Lng, Max_gostov, Cena_na_noc
     } = req.body;
 
-    if (!Ime_turnirja || !TK_Igra || !Datum || !Lokacija || !Max_ekip || !Nagradni_sklad) {
+    if (!Ime_nepremicnine || !TK_Tip_nepremicnine || !Datum || !Lokacija || !Max_gostov || !Cena_na_noc) {
         return res.status(400).json({ error: 'Vsi podatki o nepremičnini so obvezni.' });
     }
 
@@ -261,18 +303,18 @@ app.post('/api/nepremicnine', preveriToken, async (req, res) => {
         INSERT INTO "Nepremicnine" 
         ("Ime_nepremicnine", "TK_Uporabnik", "TK_Tip_nepremicnine", "TK_Pogoji_najema", "Opis", "Datum", "Lokacija", "Lat", "Lng", "Max_gostov", "Trenutno_gostov", "Status", "Cena_na_noc")
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0, 'upcoming', $11)
-        RETURNING "ID_Nepremicnina" AS "ID_Turnir"
+        RETURNING "ID_Nepremicnina"
     `;
 
     try {
         // TK_Pogoji_najema je obvezen tuji ključ — če ni podan, uporabimo prvi
         // razpoložljivi paket pogojev najema kot privzetega.
         const pogojiId = TK_Pogoji_najema || 1;
-        const values = [Ime_turnirja, req.uporabnik.id, TK_Igra, pogojiId, Opis || null, Datum, Lokacija, Lat || '0', Lng || '0', Max_ekip, Nagradni_sklad];
+        const values = [Ime_nepremicnine, req.uporabnik.id, TK_Tip_nepremicnine, pogojiId, Opis || null, Datum, Lokacija, Lat || '0', Lng || '0', Max_gostov, Cena_na_noc];
         const result = await pool.query(query, values);
         res.status(201).json({
             message: 'Nepremičnina uspešno dodana.',
-            nepremicninaId: result.rows[0].ID_Turnir
+            nepremicninaId: result.rows[0].ID_Nepremicnina
         });
     } catch (err) {
         console.error('Napaka pri vnosu nepremičnine:', err);
@@ -296,7 +338,7 @@ app.post('/api/nepremicnine/rezervacija', preveriToken, async (req, res) => {
 
         // Preveri obstoj nepremičnine in prosto kapaciteto
         const nepremicninaResult = await client.query(
-            'SELECT "Max_gostov", "Trenutno_gostov", "Status", "Ime_nepremicnine" FROM "Nepremicnine" WHERE "ID_Nepremicnina" = $1 FOR UPDATE',
+            'SELECT "Max_gostov", "Trenutno_gostov", "Status", "Ime_nepremicnine", "Lokacija", "TK_Uporabnik" FROM "Nepremicnine" WHERE "ID_Nepremicnina" = $1 FOR UPDATE',
             [tk_nepremicnina]
         );
 
@@ -327,10 +369,11 @@ app.post('/api/nepremicnine/rezervacija', preveriToken, async (req, res) => {
             return res.status(409).json({ error: 'To nepremičnino ste že rezervirali.' });
         }
 
-        // Vnos v tabelo Rezervacija
+        // Vnos v tabelo Rezervacija (shranimo tudi število gostov, da lahko ob odjavi
+        // pravilno zmanjšamo zasedenost nepremičnine)
         await client.query(
-            'INSERT INTO "Rezervacija" ("Datum_rezervacije", "TK_Nepremicnina", "TK_Uporabnik") VALUES (CURRENT_DATE, $1, $2)',
-            [tk_nepremicnina, uid]
+            'INSERT INTO "Rezervacija" ("Datum_rezervacije", "TK_Nepremicnina", "TK_Uporabnik", "Stevilo_gostov") VALUES (CURRENT_DATE, $1, $2, $3)',
+            [tk_nepremicnina, uid, gostje]
         );
 
         // Posodobitev števca trenutno nastanjenih gostov
@@ -338,6 +381,22 @@ app.post('/api/nepremicnine/rezervacija', preveriToken, async (req, res) => {
             'UPDATE "Nepremicnine" SET "Trenutno_gostov" = "Trenutno_gostov" + $1 WHERE "ID_Nepremicnina" = $2',
             [gostje, tk_nepremicnina]
         );
+
+        // Obvestilo gostu, da je rezervacija uspela
+        await client.query(
+            `INSERT INTO "Obvestila" ("TK_Nepremicnina", "Vsebina", "Tip_obvestila", "TK_Uporabnik")
+             VALUES ($1, $2, 3, $3)`,
+            [tk_nepremicnina, `Uspešno si rezerviral bivanje "${nepremicnina.Ime_nepremicnine}" v kraju ${nepremicnina.Lokacija}.`, uid]
+        );
+
+        // Obvestilo lastniku nepremičnine (če rezervacije ni oddal kar lastnik sam)
+        if (nepremicnina.TK_Uporabnik && nepremicnina.TK_Uporabnik !== uid) {
+            await client.query(
+                `INSERT INTO "Obvestila" ("TK_Nepremicnina", "Vsebina", "Tip_obvestila", "TK_Uporabnik")
+                 VALUES ($1, $2, 3, $3)`,
+                [tk_nepremicnina, `Nova rezervacija za tvojo nepremičnino "${nepremicnina.Ime_nepremicnine}".`, nepremicnina.TK_Uporabnik]
+            );
+        }
 
         await client.query('COMMIT');
 
@@ -349,6 +408,73 @@ app.post('/api/nepremicnine/rezervacija', preveriToken, async (req, res) => {
         await client.query('ROLLBACK');
         console.error('Napaka pri rezervaciji nepremičnine:', err);
         res.status(500).json({ error: 'Napaka na strežniku pri izvajanju rezervacije.' });
+    } finally {
+        client.release();
+    }
+});
+
+// DELETE /api/rezervacija/:id — uporabnik prekliče (odjavi) svojo rezervacijo
+app.delete('/api/rezervacija/:id', preveriToken, async (req, res) => {
+    const { id } = req.params;
+    const uid = req.uporabnik.id;
+
+    if (isNaN(parseInt(id))) {
+        return res.status(400).json({ error: 'Neveljaven ID rezervacije.' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const rezervacijaResult = await client.query(
+            'SELECT "ID_Rezervacija", "TK_Nepremicnina", "TK_Uporabnik", "Stevilo_gostov" FROM "Rezervacija" WHERE "ID_Rezervacija" = $1 FOR UPDATE',
+            [id]
+        );
+
+        if (rezervacijaResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Rezervacija ne obstaja.' });
+        }
+
+        const rezervacija = rezervacijaResult.rows[0];
+
+        // Uporabnik lahko odjavi samo svojo rezervacijo (admin lahko odjavi katerokoli)
+        if (rezervacija.TK_Uporabnik !== uid && req.uporabnik.vloga !== 'admin') {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ error: 'Odjaviti je mogoče samo lastno rezervacijo.' });
+        }
+
+        const nepremicninaResult = await client.query(
+            'SELECT "Ime_nepremicnine", "Trenutno_gostov" FROM "Nepremicnine" WHERE "ID_Nepremicnina" = $1 FOR UPDATE',
+            [rezervacija.TK_Nepremicnina]
+        );
+        const imeNepremicnine = nepremicninaResult.rows[0]?.Ime_nepremicnine || 'nepremičnino';
+
+        // Izbriši rezervacijo
+        await client.query('DELETE FROM "Rezervacija" WHERE "ID_Rezervacija" = $1', [id]);
+
+        // Zmanjšaj števec trenutno nastanjenih gostov (ne gre pod 0)
+        if (nepremicninaResult.rows.length > 0) {
+            await client.query(
+                'UPDATE "Nepremicnine" SET "Trenutno_gostov" = GREATEST(0, "Trenutno_gostov" - $1) WHERE "ID_Nepremicnina" = $2',
+                [rezervacija.Stevilo_gostov, rezervacija.TK_Nepremicnina]
+            );
+        }
+
+        // Obvestilo uporabniku, da je bila rezervacija preklicana
+        await client.query(
+            `INSERT INTO "Obvestila" ("TK_Nepremicnina", "Vsebina", "Tip_obvestila", "TK_Uporabnik")
+             VALUES ($1, $2, 4, $3)`,
+            [rezervacija.TK_Nepremicnina, `Rezervacija za "${imeNepremicnine}" je bila uspešno odjavljena.`, rezervacija.TK_Uporabnik]
+        );
+
+        await client.query('COMMIT');
+
+        res.json({ success: true, message: `Rezervacija za "${imeNepremicnine}" je bila odjavljena.` });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(`Napaka pri odjavi rezervacije ${id}:`, err);
+        res.status(500).json({ error: 'Napaka na strežniku pri odjavi rezervacije.' });
     } finally {
         client.release();
     }
@@ -366,13 +492,13 @@ app.delete('/api/nepremicnine/:id', preveriToken, preveriAdmin, async (req, res)
         const { rowCount } = await pool.query('DELETE FROM "Nepremicnine" WHERE "ID_Nepremicnina" = $1', [id]);
 
         if (rowCount === 0) {
-            return res.status(404).json({ error: 'Nepremičnina ne obstaja.' });
+            return res.status(404).json({ error: 'Nepremičnina ne obstaja ali je bila že izbrisana.' });
         }
 
         res.json({ success: true, message: `Nepremičnina ${id} uspešno izbrisana.` });
     } catch (err) {
         console.error(`Napaka pri brisanju nepremičnine ${id}:`, err);
-        res.status(500).json({ error: 'Napaka na strežniku.' });
+        res.status(500).json({ error: 'Napaka na strežniku pri brisanju nepremičnine: ' + (err.message || 'neznana napaka') });
     }
 });
 
@@ -386,13 +512,13 @@ app.get('/api/statistika/top', async (req, res) => {
     try {
         const { rows } = await pool.query(`
             SELECT 
-                n."ID_Nepremicnina"  AS "ID_Turnir",
-                n."Ime_nepremicnine" AS "Ime_turnirja",
+                n."ID_Nepremicnina",
+                n."Ime_nepremicnine",
                 n."Lokacija",
-                n."Cena_na_noc"      AS "Nagradni_sklad",
-                n."Max_gostov"       AS "Max_ekip",
-                n."Trenutno_gostov"  AS "Prijavljene_ekipe",
-                tn."Naziv"           AS "Naslov_igre"
+                n."Cena_na_noc",
+                n."Max_gostov",
+                n."Trenutno_gostov",
+                tn."Naziv"           AS "Tip"
             FROM "Nepremicnine" n
             JOIN "Tip_nepremicnine" tn ON n."TK_Tip_nepremicnine" = tn."ID_Tip_nepremicnine"
             ORDER BY n."Trenutno_gostov" DESC
@@ -519,7 +645,7 @@ app.get('/api/lestvica/lastniki', async (req, res) => {
 app.get('/api/moderacija', preveriToken, preveriAdmin, async (req, res) => {
     try {
         const { rows } = await pool.query(
-            `SELECT "ID_Moderacija", "TK_Nepremicnina" AS "TK_Turnir", "Datum", "Razlog", "Vrsta_ukrepa"
+            `SELECT "ID_Moderacija", "TK_Nepremicnina", "Datum", "Razlog", "Vrsta_ukrepa"
              FROM "Moderacija" ORDER BY "Datum" DESC`
         );
         res.json(rows);
@@ -531,14 +657,14 @@ app.get('/api/moderacija', preveriToken, preveriAdmin, async (req, res) => {
 
 // POST /api/moderacija — dodaj ukrep (samo admin)
 app.post('/api/moderacija', preveriToken, preveriAdmin, async (req, res) => {
-    const { TK_Turnir, Vrsta_ukrepa, Razlog } = req.body;
-    if (!TK_Turnir || !Vrsta_ukrepa || !Razlog) {
+    const { TK_Nepremicnina, Vrsta_ukrepa, Razlog } = req.body;
+    if (!TK_Nepremicnina || !Vrsta_ukrepa || !Razlog) {
         return res.status(400).json({ error: 'Vsi podatki so obvezni.' });
     }
     try {
         const { rows } = await pool.query(
             'INSERT INTO "Moderacija" ("TK_Nepremicnina","Datum","Razlog","Vrsta_ukrepa") VALUES ($1, CURRENT_DATE, $2, $3) RETURNING *',
-            [TK_Turnir, Razlog, Vrsta_ukrepa]
+            [TK_Nepremicnina, Razlog, Vrsta_ukrepa]
         );
         res.status(201).json({ success: true, moderacija: rows[0] });
     } catch (err) {
@@ -565,16 +691,14 @@ app.delete('/api/moderacija/:id', preveriToken, preveriAdmin, async (req, res) =
 // GET /api/admin/stats — osnovna statistika za admin nadzorno ploščo
 app.get('/api/admin/stats', preveriToken, preveriAdmin, async (req, res) => {
     try {
-        const [users, nepremicnine, moderacije, pending] = await Promise.all([
+        const [users, nepremicnine, pending] = await Promise.all([
             pool.query('SELECT COUNT(*) FROM "Uporabnik"'),
             pool.query('SELECT COUNT(*) FROM "Nepremicnine"'),
-            pool.query('SELECT COUNT(*) FROM "Moderacija" WHERE "Datum" = CURRENT_DATE'),
             pool.query(`SELECT COUNT(*) FROM "Nepremicnine" WHERE "Status" = 'upcoming'`)
         ]);
         res.json({
             users:       parseInt(users.rows[0].count),
-            ekipe:       parseInt(nepremicnine.rows[0].count), // ime polja "ekipe" ostalo zaradi obstoječega frontenda — pomeni število nepremičnin
-            moderacije:  parseInt(moderacije.rows[0].count),
+            nepremicnine: parseInt(nepremicnine.rows[0].count),
             pending:     parseInt(pending.rows[0].count) // nepremičnine s statusom "upcoming", ki čakajo na potrditev (admin jih "potrdi" -> "live")
         });
     } catch (err) {
@@ -910,9 +1034,7 @@ app.get('/api/profil', preveriToken, async (req, res) => {
             [uid]
         );
 
-        // "Nagrade" = število različnih promocijskih popustov, ki so veljali
-        // za nepremičnine, ki jih je uporabnik rezerviral.
-        const nagradeQ = await pool.query(
+        const popustiQ = await pool.query(
             `SELECT COUNT(DISTINCT pop."ID_Popust") AS stevilo
              FROM "Popust" pop
              JOIN "Rezervacija" r ON r."TK_Nepremicnina" = pop."TK_Nepremicnina"
@@ -920,21 +1042,20 @@ app.get('/api/profil', preveriToken, async (req, res) => {
             [uid]
         );
 
-        const zmage    = parseInt(najemiQ.rows[0].stevilo) || 0;
-        const turnirji = parseInt(rezervacijeQ.rows[0].stevilo) || 0;
+        const zakljuceniNajemi   = parseInt(najemiQ.rows[0].stevilo) || 0;
+        const steviloRezervacij  = parseInt(rezervacijeQ.rows[0].stevilo) || 0;
         // Točke zvestobe: zaključen najem šteje več kot zgolj rezervacija
-        const tocke = (zmage * 100) + (turnirji * 10);
+        const tocke = (zakljuceniNajemi * 100) + (steviloRezervacij * 10);
 
         res.json({
-            id:          u.ID_Uporabnik,
-            username:    u.Username,
-            email:       u.Email,
-            vloga:       u.Vloga,
-            drzava:      u.Drzava || '',
-            zmage,       // "zmage" = število zaključenih najemov (ime polja ostalo zaradi frontenda)
-            porazi:      0,
-            turnirji,    // "turnirji" = skupno število rezervacij
-            nagrade:     parseInt(nagradeQ.rows[0].stevilo) || 0,
+            id:                  u.ID_Uporabnik,
+            username:            u.Username,
+            email:               u.Email,
+            vloga:               u.Vloga,
+            drzava:              u.Drzava || '',
+            zakljuceni_najemi:   zakljuceniNajemi,
+            stevilo_rezervacij:  steviloRezervacij,
+            popusti:             parseInt(popustiQ.rows[0].stevilo) || 0,
             tocke
         });
     } catch (err) {
@@ -1016,12 +1137,12 @@ app.get('/api/profil/najemi', preveriToken, async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT 
-                n."ID_Nepremicnina" AS "ID_Turnir",
-                n."Ime_nepremicnine" AS "ime_turnirja",
+                n."ID_Nepremicnina",
+                n."Ime_nepremicnine",
                 n."Lokacija" AS "lokacija",
-                n."Cena_na_noc" AS "rezultat",
+                n."Cena_na_noc",
                 r."Datum_rezervacije" AS "datum",
-                tn."Naziv" AS "igra"
+                tn."Naziv" AS "tip"
              FROM "Rezervacija" r
              JOIN "Nepremicnine" n ON r."TK_Nepremicnina" = n."ID_Nepremicnina"
              JOIN "Tip_nepremicnine" tn ON n."TK_Tip_nepremicnine" = tn."ID_Tip_nepremicnine"
@@ -1043,13 +1164,15 @@ app.get('/api/profil/rezervacije', preveriToken, async (req, res) => {
     try {
         const { rows } = await pool.query(
             `SELECT 
-                n."ID_Nepremicnina" AS "ID_Turnir",
-                n."Ime_nepremicnine" AS "ime_turnirja",
+                r."ID_Rezervacija" AS "id_rezervacije",
+                n."ID_Nepremicnina",
+                n."Ime_nepremicnine",
                 r."Datum_rezervacije" AS "datum",
+                r."Stevilo_gostov" AS "stevilo_gostov",
                 n."Lokacija" AS "lokacija",
                 n."Status" AS "status",
-                n."Cena_na_noc" AS "Nagradni_sklad",
-                tn."Naziv" AS "igra"
+                n."Cena_na_noc",
+                tn."Naziv" AS "tip"
              FROM "Rezervacija" r
              JOIN "Nepremicnine" n ON r."TK_Nepremicnina" = n."ID_Nepremicnina"
              JOIN "Tip_nepremicnine" tn ON n."TK_Tip_nepremicnine" = tn."ID_Tip_nepremicnine"
@@ -1069,7 +1192,7 @@ app.get('/api/profil/feedback', preveriToken, async (req, res) => {
     const uid = req.uporabnik.id;
     try {
         const { rows } = await pool.query(
-            `SELECT o.*, g."Username" AS "ime_uporabnika", n."Ime_nepremicnine" AS "ime_turnirja"
+            `SELECT o.*, g."Username" AS "ime_uporabnika", n."Ime_nepremicnine"
              FROM "Ocena" o
              JOIN "Uporabnik" g ON o."TK_Uporabnik" = g."ID_Uporabnik"
              LEFT JOIN "Rezervacija" r ON r."ID_Rezervacija" = o."TK_Rezervacija"
@@ -1089,10 +1212,10 @@ app.get('/api/profil/feedback', preveriToken, async (req, res) => {
 //  FEEDBACK / OCENE API
 
 app.post('/api/feedback', preveriToken, async (req, res) => {
-    const { TK_Turnir, Besedilo, Ocena } = req.body;
+    const { TK_Nepremicnina, Besedilo, Ocena } = req.body;
     const uid = req.uporabnik.id;
 
-    if (!TK_Turnir || !Besedilo || !Ocena)
+    if (!TK_Nepremicnina || !Besedilo || !Ocena)
         return res.status(400).json({ error: 'Vsi podatki so obvezni.' });
     if (Ocena < 1 || Ocena > 5)
         return res.status(400).json({ error: 'Ocena mora biti med 1 in 5.' });
@@ -1100,7 +1223,7 @@ app.post('/api/feedback', preveriToken, async (req, res) => {
     try {
         const nepremicninaQ = await pool.query(
             'SELECT "TK_Forum" FROM "Nepremicnine" WHERE "ID_Nepremicnina" = $1',
-            [TK_Turnir]
+            [TK_Nepremicnina]
         );
         if (nepremicninaQ.rows.length === 0)
             return res.status(404).json({ error: 'Nepremičnina ne obstaja.' });
@@ -1108,7 +1231,7 @@ app.post('/api/feedback', preveriToken, async (req, res) => {
         // Uporabnik mora imeti rezervacijo za to nepremičnino, da lahko oceni bivanje
         const rezervacijaQ = await pool.query(
             'SELECT "ID_Rezervacija" FROM "Rezervacija" WHERE "TK_Nepremicnina" = $1 AND "TK_Uporabnik" = $2 LIMIT 1',
-            [TK_Turnir, uid]
+            [TK_Nepremicnina, uid]
         );
         if (rezervacijaQ.rows.length === 0) {
             return res.status(403).json({ error: 'Oceniti je mogoče samo nepremičnino, ki jo imate rezervirano.' });
@@ -1179,6 +1302,62 @@ app.put('/api/obvestila/:id/preberi', preveriToken, async (req, res) => {
     }
 });
 
+// POST /api/obvestila — admin ročno pošlje obvestilo enemu uporabniku ali vsem (samo admin)
+// Telo: { TK_Uporabnik (neobvezno — če manjka, gre obvestilo VSEM uporabnikom), Vsebina, Tip_obvestila (neobvezno, privzeto 1), TK_Nepremicnina (neobvezno) }
+app.post('/api/obvestila', preveriToken, preveriAdmin, async (req, res) => {
+    const { TK_Uporabnik, Vsebina, Tip_obvestila, TK_Nepremicnina } = req.body;
+    const vsebina = (Vsebina || '').trim();
+    const tip = parseInt(Tip_obvestila) || 1;
+    const nepremicninaId = TK_Nepremicnina || null;
+
+    if (!vsebina) {
+        return res.status(400).json({ error: 'Vsebina obvestila je obvezna.' });
+    }
+
+    try {
+        if (TK_Uporabnik) {
+            // Obvestilo enemu, konkretnemu uporabniku
+            const uporabnikQ = await pool.query('SELECT 1 FROM "Uporabnik" WHERE "ID_Uporabnik" = $1', [TK_Uporabnik]);
+            if (uporabnikQ.rows.length === 0) {
+                return res.status(404).json({ error: 'Uporabnik ne obstaja.' });
+            }
+            await pool.query(
+                `INSERT INTO "Obvestila" ("TK_Nepremicnina", "Vsebina", "Tip_obvestila", "TK_Uporabnik") VALUES ($1, $2, $3, $4)`,
+                [nepremicninaId, vsebina, tip, TK_Uporabnik]
+            );
+            return res.status(201).json({ success: true, poslano: 1 });
+        }
+
+        // Brez TK_Uporabnik -> obvestilo gre vsem uporabnikom (razen blokiranim)
+        const vsiQ = await pool.query(`SELECT "ID_Uporabnik" FROM "Uporabnik" WHERE "Vloga" <> 'blokiran'`);
+        if (vsiQ.rows.length === 0) {
+            return res.status(404).json({ error: 'Ni aktivnih uporabnikov, ki bi prejeli obvestilo.' });
+        }
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            for (const u of vsiQ.rows) {
+                await client.query(
+                    `INSERT INTO "Obvestila" ("TK_Nepremicnina", "Vsebina", "Tip_obvestila", "TK_Uporabnik") VALUES ($1, $2, $3, $4)`,
+                    [nepremicninaId, vsebina, tip, u.ID_Uporabnik]
+                );
+            }
+            await client.query('COMMIT');
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
+
+        res.status(201).json({ success: true, poslano: vsiQ.rows.length });
+    } catch (err) {
+        console.error('Napaka pri pošiljanju obvestila:', err);
+        res.status(500).json({ error: 'Napaka na strežniku pri pošiljanju obvestila.' });
+    }
+});
+
 //  zagon streznika
 
 async function zazeniStrezenik() {
@@ -1212,8 +1391,10 @@ async function zazeniStrezenik() {
         console.log('| GET  /api/me                         -> Moji podatki       |');
         console.log('| GET  /api/nepremicnine               -> Seznam nepremičnin |');
         console.log('| GET  /api/nepremicnine/:id           -> Ena nepremičnina   |');
+        console.log('| GET  /api/tipi-nepremicnin           -> Seznam tipov       |');
         console.log('| POST /api/nepremicnine               -> Dodaj nepremičnino |');
         console.log('| POST /api/nepremicnine/rezervacija   -> Rezerviraj         |');
+        console.log('| DEL  /api/rezervacija/:id            -> Odjavi rezervacijo |');
         console.log('| DEL  /api/nepremicnine/:id           -> Briši (admin)      |');
         console.log('| GET  /api/statistika/top             -> Top nepremičnine   |');
         console.log('| GET  /api/lestvica/najemniki         -> Lestvica najemnikov|');
@@ -1222,6 +1403,9 @@ async function zazeniStrezenik() {
         console.log('| GET  /api/forum                      -> Objave foruma      |');
         console.log('| POST /api/forum                      -> Nova objava        |');
         console.log('| POST /api/forum/:id/glasuj           -> Glasuj na objavo   |');
+        console.log('| GET  /api/obvestila                  -> Moja obvestila     |');
+        console.log('| POST /api/obvestila                  -> Pošlji (admin)     |');
+        console.log('| PUT  /api/obvestila/:id/preberi       -> Označi prebrano    |');
         console.log('|__________________________________________________________|');
     });
 }
