@@ -1,6 +1,7 @@
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
+const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { registrirajUporabnika, prijaviUporabnika } = require('./HashiranjeGesel');
 
@@ -20,9 +21,24 @@ app.use((req, res, next) => {
 //Splošni middleware 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, '../html-frontend')));
+const frontendKandidati = [
+    path.join(__dirname, '../html-frontend'), // Docker: COPY FrontEnd/ -> /app/html-frontend
+    path.join(__dirname, '../FrontEnd'),
+    path.join(__dirname, 'FrontEnd'),
+    __dirname, // vse datoteke (Server.js, index.html, style.css ...) v isti mapi
+];
+const frontendPot = frontendKandidati.find(p => {
+    try { return fs.existsSync(path.join(p, 'index.html')); } catch { return false; }
+}) || frontendKandidati[0];
 
-// PostgreSQL pool - za rainlway.app 
+console.log('Frontend se streže iz mape:', frontendPot);
+app.use(express.static(frontendPot));
+
+// PostgreSQL pool
+// Railway (in podobne platforme) ob dodani Postgres storitvi samodejno ponudi
+// eno samo povezovalno nizovje spremenljivko DATABASE_URL. Če je ta na voljo,
+// jo uporabimo prednostno; sicer se zanašamo na posamezne DB_* spremenljivke
+// (uporabno za lokalni razvoj / Docker Compose).
 const pool = process.env.DATABASE_URL
     ? new Pool({
           connectionString: process.env.DATABASE_URL,
@@ -1307,7 +1323,6 @@ app.put('/api/obvestila/:id/preberi', preveriToken, async (req, res) => {
 });
 
 // POST /api/obvestila — admin ročno pošlje obvestilo enemu uporabniku ali vsem (samo admin)
-// Telo: { TK_Uporabnik (neobvezno — če manjka, gre obvestilo VSEM uporabnikom), Vsebina, Tip_obvestila (neobvezno, privzeto 1), TK_Nepremicnina (neobvezno) }
 app.post('/api/obvestila', preveriToken, preveriAdmin, async (req, res) => {
     const { TK_Uporabnik, Vsebina, Tip_obvestila, TK_Nepremicnina } = req.body;
     const vsebina = (Vsebina || '').trim();
