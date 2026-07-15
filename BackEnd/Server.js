@@ -22,14 +22,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../html-frontend')));
 
-// PostgreSQL pool 
-const pool = new Pool({
-    user:     process.env.DB_USER     || 'postgres',
-    host:     process.env.DB_HOST     || 'localhost',
-    database: process.env.DB_NAME     || 'Easyrentbaza',
-    password: process.env.DB_PASSWORD || 'testnosuperskrpno',
-    port:     process.env.DB_PORT     || 5432,
-});
+// PostgreSQL pool - za rainlway.app 
+const pool = process.env.DATABASE_URL
+    ? new Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false }
+      })
+    : new Pool({
+          user:     process.env.DB_USER     || 'postgres',
+          host:     process.env.DB_HOST     || 'localhost',
+          database: process.env.DB_NAME     || 'Easyrentbaza',
+          password: process.env.DB_PASSWORD || 'testnosuperskrpno',
+          port:     process.env.DB_PORT     || 5432,
+      });
 
 // Dovoljene kategorije forumskih objav (uporabljeno pri validaciji in za
 // zagotovitev, da so filtri v forum.html vedno prikazani, tudi če šteje 0).
@@ -507,7 +512,6 @@ app.delete('/api/nepremicnine/:id', preveriToken, preveriAdmin, async (req, res)
 //  STATISTIKA API (uporablja jo statistika.html)
 
 // GET /api/statistika/top — top 10 najbolj rentanih nepremičnin
-// (razvrščeno po trenutnem številu nastanjenih gostov glede na kapaciteto)
 app.get('/api/statistika/top', async (req, res) => {
     try {
         const { rows } = await pool.query(`
@@ -1378,6 +1382,10 @@ async function zazeniStrezenik() {
 
     if (!povezan) {
         console.error('Kritična napaka: ni možno vzpostaviti povezave z bazo.');
+        console.error('Preveri spremenljivke DATABASE_URL (Railway) oz. DB_HOST/DB_USER/DB_PASSWORD/DB_NAME/DB_PORT.');
+        console.error(process.env.DATABASE_URL
+            ? 'DATABASE_URL je nastavljen, a povezava vseeno ni uspela — preveri, da Postgres storitev teče in da je uporabljen notranji (private) naslov.'
+            : 'DATABASE_URL ni nastavljen — brez njega se uporabljajo privzete vrednosti (host=localhost), kar na Railway ne bo delovalo.');
         process.exit(1);
     }
 
