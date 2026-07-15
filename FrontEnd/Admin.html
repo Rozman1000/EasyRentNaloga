@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Panel – Easy Rent</title>
+<title>Admin Panel - Easy Rent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -563,7 +563,7 @@ function showToast(msg, tip='ok') {
   setTimeout(() => t.remove(), 3500);
 }
 
-/* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+/* obvestila  */
 let obvestilaCache = [];
 
 async function loadNotifications() {
@@ -604,7 +604,16 @@ function toggleNotif() {
   }
 }
 
-function clearNotif() {
+async function clearNotif() {
+  const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano);
+  if (adminToken && unread.length) {
+    await Promise.all(unread.map(o => fetch('/api/obvestila/' + (o.ID_Obvestila || o.id) + '/preberi', {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + adminToken }
+    }).catch(() => {})));
+    obvestilaCache = obvestilaCache.map(o => ({ ...o, Prebrano: true, prebrano: true }));
+    updateNotifBadge();
+  }
   document.getElementById('notifPanel').style.display = 'none';
 }
 document.addEventListener('click', (e) => {

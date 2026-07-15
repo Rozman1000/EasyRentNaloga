@@ -173,7 +173,7 @@
     );
   }
 
-  /*  Ob nalaganju strani preveri ali je uporabnik prijavljen  */
+  /* ── Ob nalaganju strani preveri ali je uporabnik prijavljen ───── */
   function preveriPrijavo() {
     const token    = localStorage.getItem('token');
     const username = localStorage.getItem('username');
@@ -185,7 +185,7 @@
     }
   }
 
-  /*  Odjava  */
+  /* ── Odjava  */
   function odjava() {
     localStorage.removeItem('token');
     localStorage.removeItem('vloga');
@@ -203,7 +203,7 @@
     setTimeout(() => t.remove(), 3500);
   }
 
-  /* Nepremičnine za domačo stran (prosta + kmalu prosta) */
+  /* ── Nepremičnine za domačo stran (prosta + kmalu prosta) ───────── */
   async function naloziDomacoStran() {
     try {
       const res  = await fetch('/api/nepremicnine');
@@ -282,8 +282,17 @@
     }
   }
 
-  function clearNotif() {
-    // TODO: po želji tukaj pokliči PUT /api/obvestila/:id/preberi za vsako neprebrano obvestilo.
+  async function clearNotif() {
+    const token = localStorage.getItem('token');
+    const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano);
+    if (token && unread.length) {
+      await Promise.all(unread.map(o => fetch('/api/obvestila/' + (o.ID_Obvestila || o.id) + '/preberi', {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + token }
+      }).catch(() => {})));
+      obvestilaCache = obvestilaCache.map(o => ({ ...o, Prebrano: true, prebrano: true }));
+      updateNotifBadge();
+    }
     document.getElementById('notifPanel').style.display = 'none';
   }
   document.addEventListener('click', (e) => {

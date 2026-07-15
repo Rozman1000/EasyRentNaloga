@@ -1,11 +1,7 @@
 
 const StatsEngine = (() => {
 
-  /**
-   * computeRanking(properties)
-   * Sortira seznam nepremičnin po številu trenutnih gostov (priljubljenost)
-   * in vrne top 10 z izračunanim odstotkom zasedenosti.
-   */
+
   function computeRanking(properties) {
     return [...properties]
       .map(p => {
@@ -35,7 +31,7 @@ const StatsEngine = (() => {
     if (!el) return;
 
     if (!ranked.length) {
-      el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Še ni dovolj podatkov</div><div class="empty-sub">Statistika se izračuna, ko bodo prve rezervacije oddane.</div></div>';
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon"></div><div class="empty-text">Še ni dovolj podatkov</div><div class="empty-sub">Statistika se izračuna, ko bodo prve rezervacije oddane.</div></div>';
       return;
     }
 

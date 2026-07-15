@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Profil – Easy Rent</title>
+<title>Profil - Easy Rent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -53,7 +53,7 @@
 
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Zaščitena vsebina — se prikaže šele po preverjanju JWT -->
+  <!-- Zaščitena vsebina se prikaže šele po preverjanju JWT -->
   <div id="profilZavrnjen" style="display:none;text-align:center;padding:4rem 2rem">
     <div style="font-size:3rem;margin-bottom:1rem">🔒</div>
     <h2 style="font-family:'Poppins',sans-serif;font-size:1.8rem;margin-bottom:0.75rem">Potrebna je prijava!</h2>
@@ -63,7 +63,7 @@
 
   <div id="profilVsebina" style="display:none">
 
-    <!-- HERO: avatar + statistika -->
+    <!--avatar + statistika -->
     <div class="profil-hero">
       <div class="profil-avatar-wrap">
         <div class="profil-avatar-xl" id="profilAvatarEl" title="Klikni za spremembo avatarja">--</div>
@@ -92,7 +92,7 @@
       <button class="tab-btn"        data-tab="uredi"      onclick="switchProfilTab('uredi',this)">Uredi profil</button>
     </div>
 
-    <!-- TAB: Zgodovina tekem -->
+    <!--  Zgodovina najemov -->
     <div id="tab-najemi">
       <div class="section-title" style="margin-bottom:1rem">Zgodovina najemov</div>
       <div id="najemiList">
@@ -100,7 +100,7 @@
       </div>
     </div>
 
-    <!-- TAB: Moje rezervacije -->
+    <!--  Moje rezervacije -->
     <div id="tab-rezervacije" style="display:none">
       <div class="section-title" style="margin-bottom:1rem">Moje rezervacije</div>
       <div id="rezervacijeList">
@@ -108,7 +108,7 @@
       </div>
     </div>
 
-    <!-- TAB: Ocene & Feedback -->
+    <!--  Ocene & Feedback -->
     <div id="tab-feedback" style="display:none">
       <div class="section-title" style="margin-bottom:1rem">Moje ocene nastanitev</div>
       <div id="feedbackList" style="margin-bottom:2rem"></div>
@@ -141,7 +141,7 @@
       </div>
     </div>
 
-    <!-- TAB: Obvestila -->
+    <!-- obvestila -->
     <div id="tab-obvestila" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <div class="section-title">Obvestila</div>
@@ -154,7 +154,7 @@
       </div>
     </div>
 
-    <!-- TAB: Uredi profil -->
+    <!-- uredi profil -->
     <div id="tab-uredi" style="display:none">
       <div class="edit-section">
         <div class="section-title" style="font-size:1.1rem;margin-bottom:1.25rem">Osnovni podatki</div>
@@ -216,9 +216,9 @@
       </div>
     </div>
 
-  </div><!-- /profilVsebina -->
+  </div>
 
-</div><!-- /app -->
+</div>
 
 <script>
 /* stanje */
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
   naloziObvestila();
 });
 
-/* zavihki (tabs) */
+/* zavihki */
 function switchProfilTab(tab, btn) {
   ['najemi','rezervacije','feedback','obvestila','uredi'].forEach(t => {
     document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
@@ -281,7 +281,7 @@ async function naloziProfilPodatke() {
     document.getElementById('pRewards').textContent        = d.nagrade ?? 0;
     document.getElementById('profilMeta').textContent      = 'Registriran: ' + (d.datum_registracije ? new Date(d.datum_registracije).toLocaleDateString('sl-SI') : '--') + (d.drzava ? '  🌍 ' + d.drzava : '');
 
-    // Nagrde značke
+    // znacke
     const badges = [];
     if ((d.zmage ?? 0) >= 10) badges.push('<span class="badge badge-pro">TOP NAJEMNIK</span>');
     if ((d.zmage ?? 0) >= 5)  badges.push('<span class="badge badge-mvp">ZANESLJIV</span>');
@@ -295,7 +295,7 @@ async function naloziProfilPodatke() {
     if (d.najljubsa_igra) document.getElementById('editIgra').value = d.najljubsa_igra;
 
   } catch {
-    // Fallback: prikaži kar je v localStorage
+    // prikazi kaj je v localstorage
     const u = trenutniUser.username;
     document.getElementById('profilAvatarEl').textContent = u.substring(0,2).toUpperCase();
     document.getElementById('profilUsername').textContent = u;
@@ -309,7 +309,7 @@ async function naloziProfilPodatke() {
   }
 }
 
-/* ────── ZGODOVINA NAJEMOV ────── */
+/* zgodovina najemov*/
 async function naloziNajeme() {
   const el = document.getElementById('najemiList');
   try {
@@ -402,7 +402,7 @@ async function naloziNepremicnineZaFeedback() {
         sel.appendChild(opt);
       });
     }
-  } catch { /* tiho */ }
+  } catch { /* nic se ne zgodi */ }
 
   // Naloži obstoječe ocene
   naloziMojFeedback();
@@ -614,7 +614,7 @@ function odjava() {
   window.location.href = 'index.html';
 }
 
-/* zvonček za obvestila v navigaciji — uporabi isti userObvestila kot zavihek Obvestila */
+/* zvonček za obvestila v navigaciji */
 function updateNotifBadge() {
   const unread = (userObvestila || []).filter(o => !o.Prebrano && !o.prebrano).length;
   const badge = document.getElementById('notifBadge');
@@ -642,6 +642,7 @@ function toggleNotif() {
 }
 
 function clearNotif() {
+  preberiVsaObvestila();
   document.getElementById('notifPanel').style.display = 'none';
 }
 document.addEventListener('click', (e) => {

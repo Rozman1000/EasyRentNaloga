@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lestvica – Easy Rent</title>
+<title>Lestvica - Easy Rent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -56,7 +56,6 @@
 
   <!--
     Modalni dialog za avtentikacijo (skupen vsem podstranem).
-    TODO: ob pošiljanju poklicati backend API za avtentikacijo.
   -->
   <div class="modal-overlay" id="authModal" onclick="closeModalOutside(event)">
     <div class="modal">
@@ -120,8 +119,7 @@
 
     <!--
       Filtri po tipu nepremičnine.
-      setGame() filtrira tabelo po izbranem tipu (ime funkcije je ostalo
-      zaradi manjših sprememb, a zdaj filtrira po tipu nepremičnine).
+      
     -->
     <div class="filter-bar" style="margin-bottom:1.25rem">
       <div class="filter-chip active" onclick="setGame('all',this)">Vse vrste</div>
@@ -133,7 +131,7 @@
 
     <!--
       Zavihka za preklop med lestvico najemnikov in lastnikov.
-      switchLbTab() preklopi vidnost med #playersLb in #teamsLb.
+      
     -->
     <div class="tabs">
       <button class="tab-btn active" onclick="switchLbTab('players',this)">Najemniki</button>
@@ -142,7 +140,7 @@
 
     <!--
       Lestvica najemnikov.
-      Vsebina se generira dinamično z renderPlayers() v JS spodaj.
+      Vsebina se generira dinamično 
     -->
     <div id="playersLb">
       <div class="leaderboard-table">
@@ -187,7 +185,7 @@
 
 
 <script>
-
+ 
   let najemniki = [];
   let lastniki  = [];
   let activeGame = 'all';
@@ -201,11 +199,11 @@
     return AVATAR_BARVE[vsota % AVATAR_BARVE.length];
   }
 
-  /* Pretvori naziv tipa nepremičnine iz baze (npr. "Hiša") v id filtra (npr. "hisa") */
+  /* Pretvori naziv tipa nepremičnine iz baze  */
   function normalizirajTip(naziv) {
     if (!naziv) return 'ostalo';
     return naziv
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // odstrani šumnike (š -> s ...)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // odstrani šumnike 
       .toLowerCase();
   }
 
@@ -216,8 +214,8 @@
   const medals = ['1.', '2.', '3.'];
 
   /*
-   * rankIcon(i)
-   * Vrne HTML za oznako mesta (medalja za top 3, sicer številka).
+   
+   Vrne HTML za oznako mesta (medalja za top 3, sicer številka).
    */
   function rankIcon(i) {
     if (i < 3) return `<span style="font-weight:700;color:var(--accent-cyan)">${medals[i]}</span>`;
@@ -225,8 +223,8 @@
   }
 
   /*
-   * naloziLestvico()
-   * Naloži oba seznama (najemniki + lastniki) iz backend API-ja.
+   
+   Naloži oba seznama (najemniki + lastniki) iz backend API-ja.
    */
   async function naloziLestvico() {
     document.getElementById('lbRows').innerHTML      = '<div class="table-loading">Nalaganje...</div>';
@@ -247,8 +245,8 @@
   }
 
   /*
-   * renderPlayers(list)
-   * Generira vrstice lestvice za podani seznam najemnikov.
+  
+   Generira vrstice lestvice za podani seznam najemnikov.
    */
   function renderPlayers(list) {
     const el = document.getElementById('lbRows');
@@ -284,8 +282,8 @@
   }
 
   /*
-   * renderTeamsLb(list)
-   * Generira vrstice lestvice za podani seznam lastnikov nepremičnin.
+  
+   Generira vrstice lestvice za podani seznam lastnikov nepremičnin.
    */
   function renderTeamsLb(list) {
     const el = document.getElementById('teamsLbRows');
@@ -319,8 +317,8 @@
   }
 
   /*
-   * setGame(g, el)
-   * Nastavi filter po tipu nepremičnine in osveži obe lestvici.
+   
+   Nastavi filter po tipu nepremičnine in osveži obe lestvici.
    */
   function setGame(g, el) {
     activeGame = g;
@@ -330,9 +328,9 @@
   }
 
   /*
-   * applyFilters()
-   * Filtrira podatke po tipu nepremičnine (izpeljano iz dejanskih rezervacij/
-   * objav v bazi) in osveži obe tabeli (najemniki in lastniki).
+   
+   Filtrira podatke po tipu nepremičnine (izpeljano iz dejanskih rezervacij/
+   objav v bazi) in osveži obe tabeli (najemniki in lastniki).
    */
   function applyFilters() {
     const pl = activeGame === 'all' ? najemniki : najemniki.filter(p => normalizirajTip(p.tip) === activeGame);
@@ -342,8 +340,8 @@
   }
 
   /*
-   * switchLbTab(tab, el)
-   * Preklopi med prikazom lestvice najemnikov in lastnikov.
+   
+   Preklopi med prikazom lestvice najemnikov in lastnikov.
    */
   function switchLbTab(tab, el) {
     document.getElementById('playersLb').style.display = tab === 'players' ? 'block' : 'none';
@@ -371,7 +369,7 @@
     );
   }
 
-  // Začetni prikaz ob nalaganju strani — naloži prave podatke iz baze
+  // Začetni prikaz ob nalaganju strani
   naloziLestvico();
 
   function odjava() {
@@ -394,7 +392,7 @@
     if (um) um.style.display = 'flex';
     if (av) av.textContent   = username.substring(0,2).toUpperCase();
   })();
-  /* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+  /* obvestila  */
   let obvestilaCache = [];
 
   async function loadNotifications() {
@@ -435,7 +433,17 @@
     }
   }
 
-  function clearNotif() {
+  async function clearNotif() {
+    const token = localStorage.getItem('token');
+    const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano);
+    if (token && unread.length) {
+      await Promise.all(unread.map(o => fetch('/api/obvestila/' + (o.ID_Obvestila || o.id) + '/preberi', {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + token }
+      }).catch(() => {})));
+      obvestilaCache = obvestilaCache.map(o => ({ ...o, Prebrano: true, prebrano: true }));
+      updateNotifBadge();
+    }
     document.getElementById('notifPanel').style.display = 'none';
   }
   document.addEventListener('click', (e) => {

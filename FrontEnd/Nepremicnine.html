@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nepremičnine – Easy Rent</title>
+<title>Nepremičnine - Easy Rent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -53,7 +53,7 @@
     <div id="notifItemsContainer"></div>
   </div>
 
-  <!-- Modalni dialog za avtentikacijo (skupen vsem podstranem). -->
+  <!-- Modalni dialog za avtentikacijo  -->
   <div class="modal-overlay" id="authModal" onclick="closeModalOutside(event)">
     <div class="modal">
       <div class="modal-close" onclick="closeModal()">&#x2715;</div>
@@ -80,7 +80,7 @@
         <button class="form-submit" onclick="doLogin()">PRIJAVA</button>
       </div>
 
-      <!-- Registracijski obrazec (privzeto skrit) -->
+      <!-- Registracijski obrazec  -->
       <div id="registerForm" style="display:none">
         <div class="form-group">
           <label class="form-label">Uporabniško ime</label>
@@ -102,7 +102,7 @@
     </div>
   </div>
 
-  <!-- Modalni dialog s podrobnostmi nepremičnine (napolni se dinamično ob kliku na kartico). -->
+  <!-- Modalni dialog s podrobnostmi nepremičnine  -->
   <div class="modal-overlay" id="propertyModal" onclick="closePropertyModal(event)" style="display:none">
     <div class="modal" style="width:560px;max-width:95vw">
       <div class="modal-close" onclick="document.getElementById('propertyModal').style.display='none'">&#x2715;</div>
@@ -120,7 +120,7 @@
       <p style="color:var(--text-secondary);font-size:0.9rem">Prosta, kmalu prosta in trenutno zasedena bivališča za najem</p>
     </div>
 
-    <!-- Kratka predstavitev — statične oznake, brez potrebe po osveževanju iz baze. -->
+    <!-- Kratka predstavitev  -->
     <div class="feature-strip" style="margin-bottom:2rem">
       <div class="feature-chip"><span>Hiše, apartmaji, vile in kabine</span></div>
       <div class="feature-chip"><span>Kratkoročni in dolgoročni najem</span></div>
@@ -128,7 +128,7 @@
       <div class="feature-chip"><span>Lokacija na zemljevidu za prijavljene</span></div>
     </div>
 
-    <!-- Filtri po tipu nepremičnine in statusu. applyPropertyFilters() združi vse aktivne filtre. -->
+    <!-- Filtri po tipu nepremičnine in statusu. -->
     <div class="filter-bar">
       <input type="text" class="search-input" id="propertySearch" placeholder="Išči po nazivu ali kraju..." oninput="applyPropertyFilters()">
       <button class="filter-chip active" onclick="setTypeFilter('all', this)">Vse vrste</button>
@@ -146,21 +146,21 @@
       <button class="tab-btn" onclick="setStatusFilter('completed', this)">Zasedeno</button>
     </div>
 
-    <!-- Mreža kartic nepremičnin. Vsebina se generira dinamično z renderProperties() spodaj. -->
+    <!-- Mreža kartic nepremičnin.  -->
     <div class="cards-grid" id="propertiesGrid"></div>
 
-    <!-- Zemljevid lokacije — prikaže se samo prijavljenim uporabnikom. -->
+    <!-- Zemljevid lokacije  -->
     <div style="margin: 3rem 0 1rem;">
       <h2 class="section-title" style="font-size: 1.5rem; margin-bottom: 1rem;">Lokacija izbrane nepremičnine</h2>
 
-      <!-- Prikazano NEprijavljenim uporabnikom namesto zemljevida -->
+      <!-- Prikazano neprijavljenim uporabnikom  -->
       <div id="mapLoginNotice" class="empty-state" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg)">
         <div class="empty-icon">🔒</div>
         <div class="empty-text">Zemljevid je na voljo samo prijavljenim uporabnikom</div>
         <div class="empty-sub">Prijavi se, da vidiš natančno lokacijo nepremičnine na zemljevidu.</div>
       </div>
 
-      <!-- Prikazano prijavljenim uporabnikom; skrito privzeto (glej preveriPrijavo spodaj) -->
+      <!-- Prikazano prijavljenim uporabnikom -->
       <div id="mapWrap" style="display:none;border-radius:12px;overflow:hidden;border:1px solid var(--border)">
         <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem" id="mapHint">Klikni na nepremičnino zgoraj, da jo prikažeš na zemljevidu.</p>
         <gmp-map
@@ -181,7 +181,7 @@
     <p>&copy; 2026 Easy Rent &middot; Preprosto oddajanje in najemanje nepremičnin &middot; Slovenija</p>
   </div>
 
-</div><!-- /#app -->
+</div>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBd4xkwzYtQfLznwWGH55kQpobSQOUUzYo&libraries=maps,marker&v=beta"></script>
 <script src="login.js"></script>
@@ -265,7 +265,7 @@ function renderProperties(list) {
     }).join('');
 }
 
-// podrobnosti + zemljevid (samo za prijavljene uporabnike)
+// podrobnosti + zemljevid 
 function openProperty(id) {
     const p = properties.find(x => x.ID_Turnir === id);
     if (!p) return;
@@ -284,7 +284,7 @@ function openProperty(id) {
     `;
     document.getElementById('propertyModal').style.display = 'flex';
 
-    // Zemljevid se posodobi samo, če je uporabnik prijavljen (glej preveriPrijavo)
+    // Zemljevid se posodobi samo, če je uporabnik prijavljen 
     if (localStorage.getItem('token')) {
         updateMap(p.Lat, p.Lng, p.Ime_turnirja);
     }
@@ -311,7 +311,7 @@ function setTypeFilter(tip, el) {
     applyPropertyFilters();
 }
 
-// Zemljevid se centrira na izbrano nepremičnino. Kliče se samo, če je uporabnik prijavljen.
+// Zemljevid se centrira na izbrano nepremičnino. 
 function updateMap(lat, lng, title) {
     const mapElement = document.getElementById('mainMap');
     const markerElement = document.getElementById('mainMarker');
@@ -326,15 +326,13 @@ function updateMap(lat, lng, title) {
 }
 
 // Skrije zemljevid neprijavljenim uporabnikom in ga prikaže prijavljenim.
-// To je namerna omejitev iz zahteve: "Google Maps deluje, a le če je uporabnik prijavljen."
 function preveriDostopDoZemljevida() {
     const prijavljen = !!localStorage.getItem('token');
     document.getElementById('mapLoginNotice').style.display = prijavljen ? 'none' : 'block';
     document.getElementById('mapWrap').style.display         = prijavljen ? 'block' : 'none';
 }
 
-// rezervacija — POPRAVEK: prej je gumb samo prikazal toast, brez
-// dejanskega klica na strežnik, zato rezervacija ni bila nikoli shranjena.
+// rezervacija 
 async function rezervirajNepremicnino(id) {
     const p = properties.find(x => x.ID_Turnir === id);
     if (!p) return;
@@ -380,7 +378,7 @@ function showToast(msg) {
     setTimeout(() => t.remove(), 3500);
 }
 
-/* ── modal / avtentikacija (skupno vsem podstranem) ── */
+/* modal  */
 function openModal(tab) {
     document.getElementById('authModal').style.display = 'flex';
     switchTab(tab);
@@ -417,7 +415,7 @@ function preveriPrijavo() {
     if (av) av.textContent   = username.substring(0,2).toUpperCase();
 }
 
-/* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+/* obvestila */
 let obvestilaCache = [];
 
 async function loadNotifications() {
@@ -458,7 +456,17 @@ function toggleNotif() {
     }
 }
 
-function clearNotif() {
+async function clearNotif() {
+    const token = localStorage.getItem('token');
+    const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano);
+    if (token && unread.length) {
+        await Promise.all(unread.map(o => fetch('/api/obvestila/' + (o.ID_Obvestila || o.id) + '/preberi', {
+            method: 'PUT',
+            headers: { Authorization: 'Bearer ' + token }
+        }).catch(() => {})));
+        obvestilaCache = obvestilaCache.map(o => ({ ...o, Prebrano: true, prebrano: true }));
+        updateNotifBadge();
+    }
     document.getElementById('notifPanel').style.display = 'none';
 }
 document.addEventListener('click', (e) => {

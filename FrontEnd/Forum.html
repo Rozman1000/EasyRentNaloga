@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Forum – Easy Rent</title>
+<title>Forum - Easy Rent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -56,7 +56,6 @@
 
   <!--
     Modalni dialog za avtentikacijo (skupen vsem podstranem).
-    TODO: ob pošiljanju poklicati backend API za avtentikacijo.
   -->
   <div class="modal-overlay" id="authModal" onclick="closeModalOutside(event)">
     <div class="modal">
@@ -107,8 +106,8 @@
   </div>
 
   <!--
-
-    TODO: ob pošiljanju shraniti objavo v bazo (POST /api/forum).
+    Modalni dialog za pisanje nove forumske objave.
+    
   -->
   <div class="modal-overlay" id="newPostModal" onclick="closeNewPost(event)" style="display:none">
     <div class="modal" style="width:520px;max-width:95vw">
@@ -163,14 +162,11 @@
 
     <!--
       Hitri dostop do kategorij foruma.
-      Vsebina se generira dinamično z renderCats() v JS spodaj.
-      TODO: število objav na kategorijo prebrati iz baze.
     -->
     <div class="forum-categories" id="forumCats"></div>
 
     <!--
-      Filtri za iskanje in razvrščanje objav.
-      setCat() filtrira po kategoriji, applyFilters() kombinira vse filtre.
+      Filtri za iskanje in razvrščanje objav
     -->
     <div class="filter-bar" style="margin:1.25rem 0">
       <input type="text" class="search-input" placeholder="Iskanje razprav..." id="forumSearch" oninput="filterPosts()">
@@ -182,15 +178,13 @@
       <div class="filter-chip" onclick="setCat('splosno',this)">Splošno</div>
     </div>
 
-    <!-- Naslov sekcije (razvrščanje po "Hot/Novo/Top" je bilo odstranjeno — objave so
-         zdaj urejene po pripetosti in datumu objave neposredno iz baze) -->
+    <!-- Naslov sekcije  -->
     <div class="section-header">
       <div class="section-title"><span>Razprave</span> skupnosti</div>
     </div>
 
     <!--
- 
-      TODO: objave prebrati iz backend API-ja (GET /api/posts).
+      Seznam forumskih objav.
     -->
     <div id="forumPosts"></div>
   </div>
@@ -220,7 +214,7 @@
   let vseObjave  = [];  // iz GET /api/forum
   let activeCat  = 'all';
 
-  /* Relativni čas objave iz datuma (namesto trdo kodiranega "pred 2 urama") */
+  /* Relativni čas objave iz datuma  */
   function relativniCas(datumStr) {
     const takrat = new Date(datumStr);
     const zdaj   = new Date();
@@ -236,8 +230,8 @@
   }
 
   /*
-   * naloziForum()
-   * Naloži kategorije in objave iz backend API-ja.
+   
+   Naloži kategorije in objave iz backend API-ja.
    */
   async function naloziForum() {
     document.getElementById('forumPosts').innerHTML = '<div class="table-loading">Nalaganje...</div>';
@@ -263,8 +257,8 @@
   }
 
   /*
-   * renderCats()
-   * Izriše kartice kategorij foruma s pravim številom objav iz baze.
+   
+   Izriše kartice kategorij foruma s pravim številom objav iz baze.
    */
   function renderCats() {
     document.getElementById('forumCats').innerHTML = kategorije.map(k => {
@@ -287,9 +281,9 @@
   }
 
   /*
-   * renderPosts(list)
-   * Izriše seznam forumskih objav iz podanega filtriranega seznama.
-   * Prikaže prazno stanje, če ni zadetkov.
+   
+   Izriše seznam forumskih objav iz podanega filtriranega seznama.
+   Prikaže prazno stanje, če ni zadetkov.
    */
   function renderPosts(list) {
     const container = document.getElementById('forumPosts');
@@ -340,6 +334,9 @@
     }).join('');
   }
 
+  /*
+   glasovanje
+   */
   async function glasuj(e, id, smer) {
     e.stopPropagation();
     const token = localStorage.getItem('token');
@@ -377,9 +374,9 @@
   function filterPosts() { applyFilters(); }
 
   /*
-   * applyFilters()
-   * Združi filter po kategoriji in iskalni niz. Vrstni red (pripeto najprej,
-   * nato najnovejše) je določen že v poizvedbi na strežniku.
+   
+   Združi filter po kategoriji in iskalni niz. Vrstni red (pripeto najprej,
+   nato najnovejše) je določen že v poizvedbi na strežniku.
    */
   function applyFilters() {
     const q = (document.getElementById('forumSearch').value || '').toLowerCase();
@@ -402,9 +399,8 @@
   }
 
   /*
-   * submitPost()
-   * Validira vnosna polja modalnega obrazca in objavo shrani v bazo
-   * (POST /api/forum), nato osveži seznam objav.
+   Validira vnosna polja modalnega obrazca in objavo shrani v bazo
+   (POST /api/forum), nato osveži seznam objav.
    */
   async function submitPost() {
     const title  = document.getElementById('postTitle').value.trim();
@@ -445,7 +441,7 @@
     if (e.target.id === 'newPostModal') document.getElementById('newPostModal').style.display = 'none';
   }
 
-  /* Prikaže toast obvestilo na dnu zaslona (izgine po 3,5 s) */
+  /* Prikaže toast obvestilo na dnu zaslona  */
   function showToast(msg) {
     const c = document.getElementById('toastContainer');
     const t = document.createElement('div');
@@ -474,7 +470,7 @@
     );
   }
 
-  // Začetni prikaz ob nalaganju strani — naloži prave podatke iz baze
+  // Začetni prikaz ob nalaganju strani 
   naloziForum();
 
   function odjava() {
@@ -538,7 +534,17 @@
     }
   }
 
-  function clearNotif() {
+  async function clearNotif() {
+    const token = localStorage.getItem('token');
+    const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano);
+    if (token && unread.length) {
+      await Promise.all(unread.map(o => fetch('/api/obvestila/' + (o.ID_Obvestila || o.id) + '/preberi', {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + token }
+      }).catch(() => {})));
+      obvestilaCache = obvestilaCache.map(o => ({ ...o, Prebrano: true, prebrano: true }));
+      updateNotifBadge();
+    }
     document.getElementById('notifPanel').style.display = 'none';
   }
   document.addEventListener('click', (e) => {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Statistika – Easy Rent</title>
+<title>Statistika - Easy Rent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -125,7 +125,7 @@
       </div>
     </div>
 
-    <!-- Lestvica: najbolj priljubljene nepremičnine -->
+    <!-- Lestvica po najbolj priljubljenih nepremičninah -->
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.5rem">
       <div class="section-title" style="margin-bottom:1rem">Najbolj rentane nepremičnine</div>
       <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1rem">Razvrščeno po trenutnem številu nastanjenih gostov glede na kapaciteto.</p>
@@ -139,16 +139,16 @@
       <div id="topLocationsList"></div>
     </div>
 
-  </div><!-- /.page -->
+  </div>
 
   <div class="footer">
     <div class="footer-logo">EASYRENT</div>
     <p>© 2026 Easy Rent · Preprosto oddajanje in najemanje nepremičnin · Slovenija</p>
   </div>
 
-</div><!-- /#app -->
+</div>
 
-<!-- ── Skripte ── -->
+
 <script src="login.js"></script>
 <script src="registracija.js"></script>
 <script src="statistika.js"></script>
@@ -223,7 +223,7 @@ function renderTopLocations(data) {
   `).join('');
 }
 
-/* ── modal / auth funkcije (skupno vsem podstranem) ── */
+/*  modal */
 function openModal(tab) {
   document.getElementById('authModal').style.display = 'flex';
   switchTab(tab);
@@ -265,7 +265,7 @@ function showToast(msg) {
   setTimeout(() => t.remove(), 3500);
 }
 
-/* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+/* obvestila  */
 let obvestilaCache = [];
 
 async function loadNotifications() {
@@ -305,8 +305,17 @@ function toggleNotif() {
           </div>`).join('');
   }
 }
-function clearNotif() {
-  // TODO: Naredi PUT /api/obvestila/:id/preberi za vsako neprebrano obvestilo.
+async function clearNotif() {
+  const token = localStorage.getItem('token');
+  const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano);
+  if (token && unread.length) {
+    await Promise.all(unread.map(o => fetch('/api/obvestila/' + (o.ID_Obvestila || o.id) + '/preberi', {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + token }
+    }).catch(() => {})));
+    obvestilaCache = obvestilaCache.map(o => ({ ...o, Prebrano: true, prebrano: true }));
+    updateNotifBadge();
+  }
   document.getElementById('notifPanel').style.display = 'none';
 }
 document.addEventListener('click', (e) => {

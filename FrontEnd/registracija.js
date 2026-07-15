@@ -1,5 +1,4 @@
-// POPRAVEK: dodan fetch klic na /register.
-// Funkcija doRegister() najprej validira, potem pošlje podatke na server.
+
 
 function doRegister() {
   // Validacija — vrne false če je kaj narobe
@@ -14,7 +13,7 @@ function doRegister() {
   podatkiNaServerRegister(gamerTag, ePosta, geslo);
 }
 
-// POPRAVEK: nova funkcija ki pošlje podatke na /register
+
 function podatkiNaServerRegister(gamerTag, ePosta, geslo) {
   const podatki = {
     Username: gamerTag,

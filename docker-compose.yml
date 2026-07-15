@@ -1,14 +1,11 @@
-version: '3.8'
- 
 services:
   web-server:
     build:
       context: .
-      # POPRAVEK: dockerfile pot mora točno ustrezati imenu mape na disku.
-      # Če je mapa "js-backend" (mala b), mora biti js-backend/Dockerfile.
-      # Če je mapa "js-Backend" (velika B), mora biti js-Backend/Dockerfile.
-      # Na Linuxu (Docker) je velikost črk pomembna!
-      dockerfile: js-Backend/Dockerfile
+      # POPRAVEK: dejanski imeni map na disku sta "BackEnd" in "FrontEnd"
+      # (ne "js-Backend"/"html-frontend", kot je predpostavljala prejšnja
+      # različica) — dockerfile pot mora točno ustrezati velikosti črk!
+      dockerfile: BackEnd/Dockerfile
     container_name: web-server-js
     ports:
       - "3000:3000"
@@ -17,7 +14,7 @@ services:
       - DB_HOST=db-database
       - DB_USER=postgres
       - DB_PASSWORD=testnosuperskrpno
-      - DB_NAME=testna_baza
+      - DB_NAME=Easyrentbaza
       # POPRAVEK: dodan JWT_SECRET - brez tega server.js uporablja privzeto vrednost
       # kar ni varno. V produkciji zamenjaj z dolgim naključnim nizom.
       - JWT_SECRET=zamenjaj-z-dolgim-nakljucnim-nizom-v-produkciji
@@ -36,16 +33,18 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=testnosuperskrpno
-      - POSTGRES_DB=testna_baza
+      - POSTGRES_DB=Easyrentbaza
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # pot do SQL datoteke mora točno ustrezati imenu mape in datoteke.
-      # Ime datoteke "TurninrBaza.sql" je ohranjen (ne popravljamo, ker je datoteka taka).
-      - ./js-Backend/TurninrBaza.sql:/docker-entrypoint-initdb.d/init.sql
+      # POPRAVEK: pot popravljena na dejansko mapo "BackEnd" (glej opombo
+      # zgoraj) in dejansko ime datoteke "Easyrentbaza.sql".
+      - ./BackEnd/Easyrentbaza.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d testna_baza"]
+      # POPRAVEK: preverjalo je bazo "testna_baza", dejanska baza pa se
+      # imenuje "Easyrentbaza" (glej POSTGRES_DB spodaj) — neskladje.
+      test: ["CMD-SHELL", "pg_isready -U postgres -d Easyrentbaza"]
       interval: 3s
       timeout: 3s
       retries: 5

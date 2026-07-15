@@ -1,4 +1,4 @@
-// login.js — prijava uporabnika z JWT tokenom
+
 
 function doLogin() {
     const emailEl = document.getElementById("loginUser");

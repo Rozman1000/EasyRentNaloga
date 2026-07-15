@@ -1,12 +1,15 @@
 {
-  "name": "BackEnd",
+  "name": "easy-rent",
   "version": "1.0.0",
-  "lockfileVersion": 3,
-  "requires": true,
   "description": "Easy Rent - platforma za najem nepremicnin",
   "main": "Server.js",
-  "packages": {},
   "scripts": {
     "start": "node Server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
   }
 }

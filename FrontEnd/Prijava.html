@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prijava – Easy Rent</title>
+<title>Prijava - Easy Rent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -53,6 +53,7 @@
         <div class="auth-logo-sub">Prijava v svoj račun</div>
       </div>
 
+      
       <div class="form-group">
         <label class="form-label">E-pošta</label>
         <input type="email" class="form-input" placeholder="tvoj@email.com" id="loginUser">
@@ -64,7 +65,7 @@
       <p class="form-error" id="loginNapaka"></p>
       <button class="form-submit" onclick="doLoginStran()">PRIJAVA →</button>
 
-      <!-- POPRAVEK: odstranjem komentar // ki se je izpisal kot besedilo na strani -->
+      
       <div class="form-footer">
         Nimaš računa? <a href="registracija.html">Registriraj se</a>
       </div>
@@ -75,6 +76,7 @@
 </div>
 
 <script>
+  
   // Po uspešni prijavi shrani token in preusmeri na index.html.
   function doLoginStran() {
     const email  = document.getElementById('loginUser').value.trim();
@@ -112,7 +114,7 @@
     });
   }
 
-  /* obvestila (deljena logika navbar zvončka) — bere prava obvestila iz /api/obvestila */
+  /* obvestila  */
   let obvestilaCache = [];
 
   async function loadNotifications() {
@@ -153,7 +155,17 @@
     }
   }
 
-  function clearNotif() {
+  async function clearNotif() {
+    const token = localStorage.getItem('token');
+    const unread = obvestilaCache.filter(o => !o.Prebrano && !o.prebrano);
+    if (token && unread.length) {
+      await Promise.all(unread.map(o => fetch('/api/obvestila/' + (o.ID_Obvestila || o.id) + '/preberi', {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + token }
+      }).catch(() => {})));
+      obvestilaCache = obvestilaCache.map(o => ({ ...o, Prebrano: true, prebrano: true }));
+      updateNotifBadge();
+    }
     document.getElementById('notifPanel').style.display = 'none';
   }
   document.addEventListener('click', (e) => {
