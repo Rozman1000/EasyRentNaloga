@@ -80,7 +80,7 @@ function posodobiUporabniskiVmesnik(username) {
         return;
     }
 
-    prikaziToast("Dobrodošel, " + username + "! 🏠");
+    prikaziToast("Dobrodošel, " + username + "! ");
 }
 
 function prikaziLoginNapako(sporocilo) {
