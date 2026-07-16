@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const frontendKandidati = [
-    path.join(__dirname, '../html-frontend'), // Docker: COPY FrontEnd/ -> /app/html-frontend
+    path.join(__dirname, '../html-frontend'), // Docker: COPY FrontEnd/ 
     path.join(__dirname, '../FrontEnd'),
     path.join(__dirname, 'FrontEnd'),
     __dirname, // vse datoteke (Server.js, index.html, style.css ...) v isti mapi
@@ -35,10 +35,7 @@ console.log('Frontend se streže iz mape:', frontendPot);
 app.use(express.static(frontendPot));
 
 // PostgreSQL pool
-// Railway (in podobne platforme) ob dodani Postgres storitvi samodejno ponudi
-// eno samo povezovalno nizovje spremenljivko DATABASE_URL. Če je ta na voljo,
-// jo uporabimo prednostno; sicer se zanašamo na posamezne DB_* spremenljivke
-// (uporabno za lokalni razvoj / Docker Compose).
+
 const pool = process.env.DATABASE_URL
     ? new Pool({
           connectionString: process.env.DATABASE_URL,
@@ -52,8 +49,7 @@ const pool = process.env.DATABASE_URL
           port:     process.env.DB_PORT     || 5432,
       });
 
-// Dovoljene kategorije forumskih objav (uporabljeno pri validaciji in za
-// zagotovitev, da so filtri v forum.html vedno prikazani, tudi če šteje 0).
+// Dovoljene kategorije forumskih objav 
 const FORUM_KATEGORIJE = ['splosno', 'najemi', 'nasveti', 'vzdrzevanje', 'sosedje', 'pravno'];
 
 // Glavni del Middleware
@@ -72,10 +68,7 @@ async function preveriToken(req, res, next) {
             return res.status(403).json({ error: 'Neveljaven ali potekel žeton.' });
         }
 
-        // Žeton je veljaven, a uporabnik je lahko medtem izbrisan iz baze (npr. po
-        // ponovnem sejanju baze ali brisanju računa) — brez tega preverjanja bi
-        // vsak nadaljnji klic (rezervacija, forum, profil ...) padel s kršitvijo
-        // tujega ključa namesto z jasnim sporočilom.
+        
         try {
             const uporabnikQ = await pool.query(
                 'SELECT "Vloga" FROM "Uporabnik" WHERE "ID_Uporabnik" = $1',
@@ -109,9 +102,7 @@ function preveriAdmin(req, res, next) {
 }
 
 // Neobvezna avtentikacija — če je podan veljaven žeton, vrne uid, sicer null.
-// Uporabljeno na javnih poteh, ki želijo prilagoditi odgovor prijavljenemu
-// uporabniku (npr. prikazati njegov lastni glas na forumski objavi), a ne
-// smejo zavrniti dostopa neprijavljenim.
+
 function neobveznUid(req) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -187,7 +178,6 @@ app.post('/login', async (req, res) => {
         }
 
         // Ustvari JWT token (velja 24h)
-        // 'Administrator' v bazi → normaliziramo na 'admin' za JWT in admin check
         const vlogaNormalizirana = uporabnik.Vloga.toLowerCase() === 'administrator' ? 'admin' : uporabnik.Vloga.toLowerCase();
 
         const token = jwt.sign(
